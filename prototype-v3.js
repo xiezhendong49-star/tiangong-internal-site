@@ -118,6 +118,7 @@ function v3SeedAiRights(org, index) {
     used: Number(org.used) || 0,
     startAt: org.startAt,
     endAt: org.endAt,
+    enabled: true,
     operator: '高志远',
     createdAt: '2026-09-01 09:00',
   }];
@@ -151,7 +152,7 @@ function v3SyncAiRightTotals(org) {
 
 function v3ConsumeAiRight(org) {
   const now = Date.now();
-  const right = (org.aiRights || []).filter(item => v3AiRightStatus(item, now) === '生效中')
+  const right = (org.aiRights || []).filter(item => item.enabled !== false && v3AiRightStatus(item, now) === '生效中')
     .sort((a, b) => new Date(a.endAt) - new Date(b.endAt))[0];
   if (!right) return false;
   right.used += 1;
@@ -1150,6 +1151,7 @@ function saveZhaocaiAiRight() {
   org.aiRights.push({
     id: `AIR-${org.id}-${Date.now()}`,
     quota, used: 0, startAt: draft.startAt, endAt: draft.endAt,
+    enabled: true,
     operator: '高志远', createdAt: v3Now(),
   });
   v3SyncAiRightTotals(org);
@@ -1158,15 +1160,24 @@ function saveZhaocaiAiRight() {
   toast('AI权益已新增');
 }
 
+function toggleZhaocaiAiRight(id) {
+  const org = V3_ZHAO_ORGS[S.zcRightsIndex];
+  const right = org && (org.aiRights || []).find(item => item.id === id);
+  if (!right) return;
+  right.enabled = right.enabled === false;
+  render();
+}
+
 function zhaocaiAiRightsPanel(org) {
   const totals = v3SyncAiRightTotals(org);
   const remaining = Math.max(0, totals.quota - totals.used);
   const rows = org.aiRights.map(right => {
-    const status = v3AiRightStatus(right);
-    return `<tr><td><b>${right.quota}</b></td><td>${right.used}</td><td>${Math.max(0, right.quota - right.used)}</td><td>${v3Esc(right.startAt.replace('T', ' '))}<br><small>至 ${v3Esc(right.endAt.replace('T', ' '))}</small></td><td><span class="zc-ai-status ${status}">${status}</span></td><td>${v3Esc(right.operator)}<br><small>${v3Esc(right.createdAt)}</small></td></tr>`;
+    const lifecycle = v3AiRightStatus(right);
+    const enabled = right.enabled !== false;
+    return `<tr><td><b>${right.quota}</b></td><td>${right.used}</td><td>${Math.max(0, right.quota - right.used)}</td><td>${v3Esc(right.startAt.replace('T', ' '))}<br><small>至 ${v3Esc(right.endAt.replace('T', ' '))}</small></td><td class="zc-ai-state-cell"><span class="zc-ai-status ${enabled ? 'enabled' : 'disabled'}">${enabled ? '启用' : '停用'}</span><small>${lifecycle}</small></td><td>${v3Esc(right.operator)}<br><small>${v3Esc(right.createdAt)}</small></td><td><button class="zc-ai-toggle ${enabled ? 'disable' : 'enable'}" onclick="toggleZhaocaiAiRight('${v3Esc(right.id)}')">${enabled ? '停用' : '启用'}</button></td></tr>`;
   }).join('');
   const form = S.zcAiFormOpen ? `<section class="zc-ai-add-form"><header><b>新增AI权益</b><button onclick="closeZhaocaiAiRightForm()">×</button></header><div><label>权益次数<input type="number" min="1" placeholder="请输入次数" value="${v3Esc(S.zcAiDraft.quota)}" oninput="S.zcAiDraft.quota=this.value"></label><label>开始时间<input type="datetime-local" value="${v3Esc(S.zcAiDraft.startAt)}" oninput="S.zcAiDraft.startAt=this.value"></label><label>结束时间<input type="datetime-local" value="${v3Esc(S.zcAiDraft.endAt)}" oninput="S.zcAiDraft.endAt=this.value"></label></div><footer><button onclick="closeZhaocaiAiRightForm()">取消</button><button class="primary" onclick="saveZhaocaiAiRight()">保存权益</button></footer></section>` : '';
-  return `<div class="zc-ai-rights-panel"><div class="zc-ai-summary"><div><span>AI总次数</span><b>${totals.quota}</b></div><div><span>已使用</span><b>${totals.used}</b></div><div><span>剩余</span><b>${remaining}</b></div></div><div class="zc-ai-list-head"><div><b>权益明细</b><span>按有效期独立管理</span></div><button onclick="openZhaocaiAiRightForm()">＋ 新增权益</button></div>${form}<div class="zc-ai-table-wrap"><table><thead><tr><th>权益次数</th><th>已使用</th><th>剩余</th><th>有效期</th><th>状态</th><th>创建信息</th></tr></thead><tbody>${rows}</tbody></table></div><p class="zc-ai-rule">使用时优先扣减最早到期的有效权益。</p></div>`;
+  return `<div class="zc-ai-rights-panel"><div class="zc-ai-summary"><div><span>AI总次数</span><b>${totals.quota}</b></div><div><span>已使用</span><b>${totals.used}</b></div><div><span>剩余</span><b>${remaining}</b></div></div><div class="zc-ai-list-head"><div><b>权益明细</b><span>按有效期独立管理</span></div><button onclick="openZhaocaiAiRightForm()">＋ 新增权益</button></div>${form}<div class="zc-ai-table-wrap"><table><thead><tr><th>权益次数</th><th>已使用</th><th>剩余</th><th>有效期</th><th>状态</th><th>创建信息</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div><p class="zc-ai-rule">仅启用且在有效期内的权益会参与扣减，并优先使用最早到期的权益。</p></div>`;
 }
 
 function zhaocaiRightsDialog() {

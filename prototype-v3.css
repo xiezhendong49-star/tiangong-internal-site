@@ -550,8 +550,10 @@
 .zc-ai-table-wrap table{width:100%;border-collapse:collapse;font-size:11px}
 .zc-ai-table-wrap th{height:36px;padding:0 9px;background:#f6f8f9;color:#68747d;text-align:left;white-space:nowrap}
 .zc-ai-table-wrap td{padding:9px;border-top:1px solid #e6eaed;line-height:1.45}.zc-ai-table-wrap small{color:#7b858d}
-.zc-ai-status{display:inline-flex;padding:4px 7px;border-radius:10px;background:#e8f6ef;color:#27805e;font-size:10px;white-space:nowrap}
-.zc-ai-status.已到期,.zc-ai-status.已用完{background:#f1f2f3;color:#707980}.zc-ai-status.待生效{background:#fff4df;color:#9a6b1d}
+.zc-ai-state-cell small{display:block;margin-top:3px;white-space:nowrap}
+.zc-ai-status{display:inline-flex;padding:4px 8px;border-radius:10px;background:#e8f6ef;color:#27805e;font-size:10px;white-space:nowrap}
+.zc-ai-status.disabled{background:#f1f2f3;color:#717a82}
+.zc-ai-toggle{height:28px;min-width:48px;border:1px solid #d4dce2;border-radius:4px;background:#fff;padding:0 10px;font-size:10px;white-space:nowrap;cursor:pointer}.zc-ai-toggle.disable{color:#c44c4c}.zc-ai-toggle.enable{border-color:#a8d3f4;color:#168df0}
 .zc-ai-add-form{padding:12px;border:1px solid #b8d9ef;border-radius:6px;background:#f5fbff}
 .zc-ai-add-form>header{display:flex;align-items:center;margin-bottom:10px}.zc-ai-add-form>header button{margin-left:auto;border:0;background:transparent;font-size:18px}
 .zc-ai-add-form>div{display:grid;grid-template-columns:.7fr 1fr 1fr;gap:10px}.zc-ai-add-form label{display:flex;flex-direction:column;gap:5px;color:#52606a;font-size:11px}
