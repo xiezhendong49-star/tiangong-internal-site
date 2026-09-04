@@ -162,7 +162,7 @@ function v3ConsumeAiRight(org) {
 const V3_CALL_LOGS = [
   {
     id: 'AI202609010012', institution: '空间改造设计机构', operator: '高志远', type: '生成效果图',
-    time: '2026-09-01 09:41', status: '成功', counted: true,
+    time: '2026-09-01 09:41', generatedAt: '2026-09-01 09:43', status: '成功', counted: true,
     mainImage: 'prototype_assets/floorplan-98.png', mainLabel: '花香壹号 98㎡',
     resultImage: 'prototype_assets/room-original.jpg', resultLabel: '最终效果图',
     floorBox: { x: 6, y: 48, w: 31, h: 43 },
@@ -174,7 +174,7 @@ const V3_CALL_LOGS = [
   },
   {
     id: 'AI202609010011', institution: '空间改造设计机构', operator: '陈晓', type: '材质替换',
-    time: '2026-09-01 09:26', status: '成功', counted: true,
+    time: '2026-09-01 09:26', generatedAt: '2026-09-01 09:27', status: '成功', counted: true,
     mainImage: 'prototype_assets/room-alt.jpg', mainLabel: '原木餐厅',
     resultImage: 'prototype_assets/room-replaced.jpg', resultLabel: '最终替换效果图',
     points: [
@@ -188,7 +188,7 @@ const V3_CALL_LOGS = [
   },
   {
     id: 'AI202608310086', institution: '成都近相室内设计有限公司', operator: '李彬', type: '生成效果图',
-    time: '2026-08-31 17:52', status: '失败', counted: false,
+    time: '2026-08-31 17:52', generatedAt: '', status: '失败', counted: false,
     failureReason: '图片生成服务响应超时，本次任务未生成效果图，请稍后重试。',
     mainImage: 'prototype_assets/floorplan-135.png', mainLabel: '滨江四居 135㎡',
     floorBox: { x: 52, y: 12, w: 35, h: 37 },
@@ -225,6 +225,8 @@ Object.assign(S, {
   activeMaterialId: null,
   marks: [],
   active: null,
+  generationStartedAt: '',
+  replacementStartedAt: '',
   compare: 50,
   adminSection: 'floor',
   v3AdminModal: null,
@@ -449,6 +451,7 @@ function generatePickerDialog() {
 
 function generateBase() {
   if (!S.floorImage || !S.styleImage) return;
+  S.generationStartedAt = v3Now();
   S.page = 'loadingBase';
   render();
   clearTimeout(S.loadingTimer);
@@ -456,15 +459,16 @@ function generateBase() {
 }
 
 function finishBaseGeneration() {
-  const time = v3Now();
+  const generatedAt = v3Now();
+  const time = S.generationStartedAt || generatedAt;
   S.baseResult = V3_USER_ASSETS.effectBefore;
   const historyName = [S.floorName, S.styleName].filter(Boolean).join(' · ') || '生成效果图';
-  const history = { id: `history-${Date.now()}`, name: historyName, image: S.baseResult, time, operator: '高志远' };
+  const history = { id: `history-${Date.now()}`, name: historyName, image: S.baseResult, time: generatedAt, operator: '高志远' };
   V3_EFFECT_HISTORY.unshift(history);
   v3PersistEffectHistory();
   V3_CALL_LOGS.unshift({
     id: `AI${Date.now()}`,
-    institution: '空间改造设计机构', operator: '高志远', type: '生成效果图', time, status: '成功', counted: true,
+    institution: '空间改造设计机构', operator: '高志远', type: '生成效果图', time, generatedAt, status: '成功', counted: true,
     mainImage: S.floorImage, mainLabel: S.floorName, floorBox: { ...S.floorBox },
     resultImage: S.baseResult, resultLabel: '最终效果图',
     inputs: [
@@ -473,6 +477,7 @@ function finishBaseGeneration() {
       { label: '最终效果图', image: S.baseResult },
     ],
   });
+  S.generationStartedAt = '';
   v3ConsumeAiRight(V3_INSTITUTIONS[0]);
   v3ConsumeAiRight(V3_ZHAO_ORGS[0]);
   S.page = 'generatePreview';
@@ -813,6 +818,7 @@ function canGenerate() {
 
 function replaceMaterial() {
   if (!canGenerate()) return;
+  S.replacementStartedAt = v3Now();
   S.page = 'loadingReplace';
   render();
   clearTimeout(S.loadingTimer);
@@ -834,10 +840,11 @@ function v3ResolveReplacementResult(inputImage) {
 
 function finishV3Replacement() {
   const used = S.marks.map(mark => S.materialCandidates.find(material => material.id === mark.materialId)).filter(Boolean);
-  const time = v3Now();
+  const generatedAt = v3Now();
+  const time = S.replacementStartedAt || generatedAt;
   S.replacementResult = v3ResolveReplacementResult(S.inputImage);
   const historyName = `${S.inputName || '效果图'} · 材质替换`;
-  V3_EFFECT_HISTORY.unshift({ id: `replacement-${Date.now()}`, name: historyName, image: S.replacementResult, time, operator: '高志远', type: '材质替换' });
+  V3_EFFECT_HISTORY.unshift({ id: `replacement-${Date.now()}`, name: historyName, image: S.replacementResult, time: generatedAt, operator: '高志远', type: '材质替换' });
   v3PersistEffectHistory();
   const points = S.marks.map(mark => {
     const material = S.materialCandidates.find(item => item.id === mark.materialId);
@@ -845,11 +852,12 @@ function finishV3Replacement() {
   }).filter(point => point.material);
   V3_CALL_LOGS.unshift({
     id: `AI${Date.now()}`,
-    institution: '空间改造设计机构', operator: '高志远', type: '材质替换', time, status: '成功', counted: true,
+    institution: '空间改造设计机构', operator: '高志远', type: '材质替换', time, generatedAt, status: '成功', counted: true,
     mainImage: S.inputImage, mainLabel: S.inputName || '效果图',
     resultImage: S.replacementResult, resultLabel: '最终替换效果图', points,
     inputs: [{ label: '带点原图', image: S.inputImage }, { label: '最终替换效果图', image: S.replacementResult }],
   });
+  S.replacementStartedAt = '';
   v3ConsumeAiRight(V3_INSTITUTIONS[0]);
   v3ConsumeAiRight(V3_ZHAO_ORGS[0]);
   S.page = 'compare';
@@ -993,9 +1001,9 @@ function v3CallImagesCell(log) {
 
 function v3CallLogScreen() {
   const query = String(S.adminQuery || '').trim();
-  const rows = V3_CALL_LOGS.filter(log => !query || log.operator.includes(query) || log.type.includes(query) || log.time.includes(query));
-  const tableRows = rows.map((log, index) => `<tr><td>${index + 1}</td><td>${v3CallImagesCell(log)}</td><td><b>${log.type}</b></td><td>${log.operator}</td><td>${log.time}</td><td><span class="v3-status ${log.status === '失败' ? 'fail' : ''}">${log.status}</span></td><td><div class="v3-admin-actions"><button onclick="openV3CallDetail('${log.id}')">查看</button></div></td></tr>`).join('');
-  const content = `<section class="v3-admin-card"><div class="v3-admin-title"><div><h1>创作记录</h1><p>查看创作图片</p></div></div><div class="v3-admin-filters"><input placeholder="搜索操作人或创作类型" value="${v3Esc(S.adminQuery)}" oninput="S.adminQuery=this.value"><button class="v3-btn" onclick="render()">查询</button></div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>序号</th><th>相关图片</th><th>创作类型</th><th>操作人</th><th>创作时间</th><th>状态</th><th>操作</th></tr></thead><tbody>${tableRows}</tbody></table></div></section>`;
+  const rows = V3_CALL_LOGS.filter(log => !query || log.operator.includes(query) || log.type.includes(query) || log.time.includes(query) || (log.generatedAt || '').includes(query));
+  const tableRows = rows.map((log, index) => `<tr><td>${index + 1}</td><td>${v3CallImagesCell(log)}</td><td><b>${log.type}</b></td><td>${log.operator}</td><td><span class="v3-call-time">${log.time}</span></td><td><span class="v3-call-time ${log.generatedAt ? '' : 'empty'}">${log.generatedAt || '未生成'}</span></td><td><span class="v3-status ${log.status === '失败' ? 'fail' : ''}">${log.status}</span></td><td><div class="v3-admin-actions"><button onclick="openV3CallDetail('${log.id}')">查看</button></div></td></tr>`).join('');
+  const content = `<section class="v3-admin-card"><div class="v3-admin-title"><div><h1>创作记录</h1><p>查看创作图片</p></div></div><div class="v3-admin-filters"><input placeholder="搜索操作人或创作类型" value="${v3Esc(S.adminQuery)}" oninput="S.adminQuery=this.value"><button class="v3-btn" onclick="render()">查询</button></div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>序号</th><th>相关图片</th><th>创作类型</th><th>操作人</th><th>创作时间</th><th>生成时间</th><th>状态</th><th>操作</th></tr></thead><tbody>${tableRows}</tbody></table></div></section>`;
   return v3AdminFrame('创作记录', content, S.v3CallDetail ? v3CallDetailDialog() : '');
 }
 
@@ -1016,7 +1024,7 @@ function v3CallDetailDialog() {
   const generated = `<div class="v3-call-detail-stack"><section class="v3-call-detail-section"><div class="v3-call-section-title"><div><h3>输入内容</h3><p>本次创作使用的户型与风格参考</p></div><span>${inputItems.length} 项</span></div><div class="v3-call-images">${inputCards}</div></section><section class="v3-call-detail-section"><div class="v3-call-section-title"><div><h3>生成结果</h3><p>${failed ? '任务未成功完成' : '本次任务生成的最终图片'}</p></div></div>${generatedResult}</section></div>`;
   const material = `<section class="v3-call-detail-section"><div class="v3-call-section-title"><div><h3>创作内容</h3><p>查看原图、替换结果与标点物料</p></div></div><div class="v3-material-call-detail"><section><h3>带点原图</h3>${v3MarkedEffect(log)}</section><aside><div class="v3-call-result"><h3>最终替换效果图</h3><img src="${log.resultImage || log.mainImage}" alt="最终替换效果图"></div><div class="v3-point-material-list"><h3>标点物料</h3>${(log.points || []).map((point, index) => `<article><em>${index + 1}</em><img src="${point.material.image}" alt="${v3Esc(point.material.name || '本地物料图片')}"><span>${point.material.name ? `<b>${v3Esc(point.material.name)}</b>` : ''}${point.material.category ? `<small>${v3Esc(point.material.category)}</small>` : ''}<small>${v3Esc(point.material.source)}</small></span></article>`).join('')}</div></aside></div></section>`;
   const failure = failed ? `<div class="v3-call-failure" role="status" aria-atomic="true"><span aria-hidden="true">!</span><div><b>创作失败</b><p>${v3Esc(log.failureReason || '任务执行失败，本次未生成结果。')}</p></div></div>` : '';
-  return `<div class="v3-mask"><section class="v3-admin-dialog v3-call-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="v3-call-detail-title"><header class="v3-call-detail-head"><div class="v3-call-detail-heading"><div><span class="v3-call-detail-eyebrow">创作记录详情</span><h2 id="v3-call-detail-title">${v3Esc(log.type)}</h2></div><span class="v3-detail-status ${statusClass}" role="status" aria-atomic="true">${v3Esc(log.status)}</span></div><button class="v3-icon-btn" aria-label="关闭创作记录详情" onclick="S.v3CallDetail=null;render()">×</button></header><div class="v3-dialog-body v3-call-detail-body"><div class="v3-call-meta"><div><span>记录编号</span><b>${v3Esc(log.id)}</b></div><div><span>操作人</span><b>${v3Esc(log.operator)}</b></div><div><span>创作时间</span><b>${v3Esc(log.time)}</b></div><div><span>权益扣减</span><b>${log.counted ? '已扣减 1 次' : '未扣减'}</b></div></div>${failure}${log.type === '材质替换' ? material : generated}</div><footer class="v3-dialog-foot v3-call-detail-foot"><button class="v3-btn" onclick="S.v3CallDetail=null;render()">关闭</button></footer></section></div>`;
+  return `<div class="v3-mask"><section class="v3-admin-dialog v3-call-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="v3-call-detail-title"><header class="v3-call-detail-head"><div class="v3-call-detail-heading"><div><span class="v3-call-detail-eyebrow">创作记录详情</span><h2 id="v3-call-detail-title">${v3Esc(log.type)}</h2></div><span class="v3-detail-status ${statusClass}" role="status" aria-atomic="true">${v3Esc(log.status)}</span></div><button class="v3-icon-btn" aria-label="关闭创作记录详情" onclick="S.v3CallDetail=null;render()">×</button></header><div class="v3-dialog-body v3-call-detail-body"><div class="v3-call-meta"><div><span>记录编号</span><b>${v3Esc(log.id)}</b></div><div><span>操作人</span><b>${v3Esc(log.operator)}</b></div><div><span>创作时间</span><b>${v3Esc(log.time)}</b></div><div><span>生成时间</span><b class="${log.generatedAt ? '' : 'empty'}">${v3Esc(log.generatedAt || '未生成')}</b></div></div>${failure}${log.type === '材质替换' ? material : generated}</div><footer class="v3-dialog-foot v3-call-detail-foot"><button class="v3-btn" onclick="S.v3CallDetail=null;render()">关闭</button></footer></section></div>`;
 }
 
 function v3InstitutionScreen() {

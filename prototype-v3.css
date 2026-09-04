@@ -389,6 +389,7 @@
 .v3-table th{height:43px;background:#f7f9fa;color:#65737d;text-align:left;font-weight:600;white-space:nowrap}
 .v3-table th,.v3-table td{padding:9px 11px;border-bottom:1px solid #e8edf0;vertical-align:middle}
 .v3-table tr:last-child td{border-bottom:0}
+.v3-call-time{white-space:nowrap}.v3-call-time.empty,.v3-call-meta b.empty{color:#a46a6a;font-weight:500}
 .v3-table-thumb{width:76px;height:48px;border-radius:6px;object-fit:cover;background:#eef1f2}
 .v3-table-floor{position:relative;width:90px;height:58px;border:1px solid var(--v3-line);border-radius:6px;overflow:hidden;background:#eef0f1}
 .v3-table-floor img{width:100%;height:100%;object-fit:contain}
