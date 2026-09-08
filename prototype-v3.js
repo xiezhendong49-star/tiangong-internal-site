@@ -121,6 +121,7 @@ function v3SeedAiRights(org, index) {
     enabled: true,
     operator: '高志远',
     createdAt: '2026-09-01 09:00',
+    remark: '',
   }];
 }
 
@@ -1125,7 +1126,7 @@ function openZhaocaiAiRightForm() {
   const end = new Date(start);
   end.setFullYear(end.getFullYear() + 1);
   S.zcAiFormOpen = true;
-  S.zcAiDraft = { quota: '', startAt: v3DateTimeInput(start), endAt: v3DateTimeInput(end) };
+  S.zcAiDraft = { quota: '', startAt: v3DateTimeInput(start), endAt: v3DateTimeInput(end), remark: '' };
   render();
 }
 
@@ -1148,11 +1149,17 @@ function saveZhaocaiAiRight() {
     toast('请选择正确的有效期');
     return;
   }
+  const remark = String(draft.remark || '').trim();
+  if (remark.length > 500) {
+    toast('备注不能超过500字');
+    return;
+  }
   org.aiRights.push({
     id: `AIR-${org.id}-${Date.now()}`,
     quota, used: 0, startAt: draft.startAt, endAt: draft.endAt,
     enabled: true,
     operator: '高志远', createdAt: v3Now(),
+    remark,
   });
   v3SyncAiRightTotals(org);
   S.zcAiFormOpen = false;
@@ -1174,10 +1181,12 @@ function zhaocaiAiRightsPanel(org) {
   const rows = org.aiRights.map(right => {
     const lifecycle = v3AiRightStatus(right);
     const enabled = right.enabled !== false;
-    return `<tr><td><b>${right.quota}</b></td><td>${right.used}</td><td>${Math.max(0, right.quota - right.used)}</td><td>${v3Esc(right.startAt.replace('T', ' '))}<br><small>至 ${v3Esc(right.endAt.replace('T', ' '))}</small></td><td class="zc-ai-state-cell"><span class="zc-ai-status ${enabled ? 'enabled' : 'disabled'}">${enabled ? '启用' : '停用'}</span><small>${lifecycle}</small></td><td>${v3Esc(right.operator)}<br><small>${v3Esc(right.createdAt)}</small></td><td><button class="zc-ai-toggle ${enabled ? 'disable' : 'enable'}" onclick="toggleZhaocaiAiRight('${v3Esc(right.id)}')">${enabled ? '停用' : '启用'}</button></td></tr>`;
+    const remark = String(right.remark || '').trim();
+    return `<tr><td><b>${right.quota}</b></td><td>${right.used}</td><td>${Math.max(0, right.quota - right.used)}</td><td>${v3Esc(right.startAt.replace('T', ' '))}<br><small>至 ${v3Esc(right.endAt.replace('T', ' '))}</small></td><td class="zc-ai-remark" title="${v3Esc(remark)}">${remark ? v3Esc(remark) : '—'}</td><td class="zc-ai-state-cell"><span class="zc-ai-status ${enabled ? 'enabled' : 'disabled'}">${enabled ? '启用' : '停用'}</span><small>${lifecycle}</small></td><td>${v3Esc(right.operator)}<br><small>${v3Esc(right.createdAt)}</small></td><td><button class="zc-ai-toggle ${enabled ? 'disable' : 'enable'}" onclick="toggleZhaocaiAiRight('${v3Esc(right.id)}')">${enabled ? '停用' : '启用'}</button></td></tr>`;
   }).join('');
-  const form = S.zcAiFormOpen ? `<section class="zc-ai-add-form"><header><b>新增AI权益</b><button onclick="closeZhaocaiAiRightForm()">×</button></header><div><label>权益次数<input type="number" min="1" placeholder="请输入次数" value="${v3Esc(S.zcAiDraft.quota)}" oninput="S.zcAiDraft.quota=this.value"></label><label>开始时间<input type="datetime-local" value="${v3Esc(S.zcAiDraft.startAt)}" oninput="S.zcAiDraft.startAt=this.value"></label><label>结束时间<input type="datetime-local" value="${v3Esc(S.zcAiDraft.endAt)}" oninput="S.zcAiDraft.endAt=this.value"></label></div><footer><button onclick="closeZhaocaiAiRightForm()">取消</button><button class="primary" onclick="saveZhaocaiAiRight()">保存权益</button></footer></section>` : '';
-  return `<div class="zc-ai-rights-panel"><div class="zc-ai-summary"><div><span>AI总次数</span><b>${totals.quota}</b></div><div><span>已使用</span><b>${totals.used}</b></div><div><span>剩余</span><b>${remaining}</b></div></div><div class="zc-ai-list-head"><div><b>权益明细</b><span>按有效期独立管理</span></div><button onclick="openZhaocaiAiRightForm()">＋ 新增权益</button></div>${form}<div class="zc-ai-table-wrap"><table><thead><tr><th>权益次数</th><th>已使用</th><th>剩余</th><th>有效期</th><th>状态</th><th>创建信息</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  const remarkCount = String(S.zcAiDraft && S.zcAiDraft.remark || '').length;
+  const form = S.zcAiFormOpen ? `<section class="zc-ai-add-form"><header><b>新增AI权益</b><button onclick="closeZhaocaiAiRightForm()">×</button></header><div><label>权益次数<input type="number" min="1" placeholder="请输入次数" value="${v3Esc(S.zcAiDraft.quota)}" oninput="S.zcAiDraft.quota=this.value"></label><label>开始时间<input type="datetime-local" value="${v3Esc(S.zcAiDraft.startAt)}" oninput="S.zcAiDraft.startAt=this.value"></label><label>结束时间<input type="datetime-local" value="${v3Esc(S.zcAiDraft.endAt)}" oninput="S.zcAiDraft.endAt=this.value"></label></div><label class="zc-ai-remark-input"><span>备注（选填）</span><textarea maxlength="500" placeholder="请填写本次权益发放原因或补充说明" oninput="this.value=this.value.slice(0,500);S.zcAiDraft.remark=this.value;this.nextElementSibling.textContent=this.value.length+'/500'">${v3Esc(S.zcAiDraft.remark)}</textarea><small>${remarkCount}/500</small></label><footer><button onclick="closeZhaocaiAiRightForm()">取消</button><button class="primary" onclick="saveZhaocaiAiRight()">保存权益</button></footer></section>` : '';
+  return `<div class="zc-ai-rights-panel"><div class="zc-ai-summary"><div><span>AI总次数</span><b>${totals.quota}</b></div><div><span>已使用</span><b>${totals.used}</b></div><div><span>剩余</span><b>${remaining}</b></div></div><div class="zc-ai-list-head"><div><b>权益明细</b><span>按有效期独立管理</span></div><button onclick="openZhaocaiAiRightForm()">＋ 新增权益</button></div>${form}<div class="zc-ai-table-wrap"><table><thead><tr><th>权益次数</th><th>已使用</th><th>剩余</th><th>有效期</th><th>备注</th><th>状态</th><th>创建信息</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 
 function zhaocaiRightsDialog() {

@@ -518,7 +518,7 @@
 .zc-row-actions{display:flex;gap:8px}
 .zc-row-actions button{border:0;background:transparent;color:#168df0;padding:2px 0;font-size:11px}
 .zc-mask{position:absolute;inset:0;z-index:120;display:grid;place-items:center;background:rgba(0,0,0,.42)}
-.zc-rights-dialog{width:780px;height:690px;display:flex;flex-direction:column;background:#fff;border-radius:3px;box-shadow:0 20px 55px rgba(0,0,0,.24);overflow:hidden}
+.zc-rights-dialog{width:900px;max-width:calc(100% - 48px);height:690px;display:flex;flex-direction:column;background:#fff;border-radius:3px;box-shadow:0 20px 55px rgba(0,0,0,.24);overflow:hidden}
 .zc-rights-dialog>header{height:62px;flex:none;display:flex;align-items:center;padding:0 22px;border-bottom:1px solid #e3e3e3}
 .zc-rights-dialog>header h2{margin:0;font-size:17px;font-weight:500}
 .zc-rights-dialog>header button{margin-left:auto;border:0;background:transparent;color:#888;font-size:24px}
@@ -547,9 +547,10 @@
 .zc-ai-list-head>div span{margin-left:8px;color:#7c8790;font-size:11px}
 .zc-ai-list-head>button{height:34px;border:0;border-radius:4px;background:#168df0;color:#fff;padding:0 14px}
 .zc-ai-table-wrap{max-height:230px;overflow:auto;border:1px solid #e0e5e9}
-.zc-ai-table-wrap table{width:100%;border-collapse:collapse;font-size:11px}
+.zc-ai-table-wrap table{width:100%;min-width:780px;border-collapse:collapse;font-size:11px}
 .zc-ai-table-wrap th{height:36px;padding:0 9px;background:#f6f8f9;color:#68747d;text-align:left;white-space:nowrap}
 .zc-ai-table-wrap td{padding:9px;border-top:1px solid #e6eaed;line-height:1.45}.zc-ai-table-wrap small{color:#7b858d}
+.zc-ai-remark{width:132px;max-width:132px;overflow:hidden;color:#4f5b64;text-overflow:ellipsis;white-space:nowrap}
 .zc-ai-state-cell small{display:block;margin-top:3px;white-space:nowrap}
 .zc-ai-status{display:inline-flex;padding:4px 8px;border-radius:10px;background:#e8f6ef;color:#27805e;font-size:10px;white-space:nowrap}
 .zc-ai-status.disabled{background:#f1f2f3;color:#717a82}
@@ -558,6 +559,7 @@
 .zc-ai-add-form>header{display:flex;align-items:center;margin-bottom:10px}.zc-ai-add-form>header button{margin-left:auto;border:0;background:transparent;font-size:18px}
 .zc-ai-add-form>div{display:grid;grid-template-columns:.7fr 1fr 1fr;gap:10px}.zc-ai-add-form label{display:flex;flex-direction:column;gap:5px;color:#52606a;font-size:11px}
 .zc-ai-add-form input{height:34px;border:1px solid #cfdae1;border-radius:4px;background:#fff;padding:0 9px}
+.zc-ai-remark-input{position:relative;margin-top:10px}.zc-ai-add-form textarea{min-height:66px;max-height:130px;resize:vertical;border:1px solid #cfdae1;border-radius:4px;background:#fff;padding:8px 9px 22px;line-height:1.5;font:inherit}.zc-ai-remark-input small{position:absolute;right:9px;bottom:7px;color:#8a959d;font-size:10px}
 .zc-ai-add-form>footer{display:flex;justify-content:flex-end;gap:7px;margin-top:10px}.zc-ai-add-form>footer button{height:31px;border:1px solid #d3dbe1;border-radius:4px;background:#fff;padding:0 13px}.zc-ai-add-form>footer button.primary{border-color:#168df0;background:#168df0;color:#fff}
 .zc-ai-rule{margin:0;color:#78838c;font-size:10px}
 .zc-rights-dialog>footer{height:54px;flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 15px;border-top:1px solid #e6e6e6}
