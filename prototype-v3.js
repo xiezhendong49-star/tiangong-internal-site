@@ -1867,6 +1867,8 @@ V3_CALL_LOGS.unshift(...Array.from({length:15},(_,index)=>{
    inputs:[{label:'带点原图',image:mainImage},{label:'最终替换效果图',image:resultImage}]};
 }));
 V3_CALL_LOGS.forEach(log=>(log.points||[]).forEach((point,index)=>{ if(point.material.source!=='本地上传') { point.material.platformCode ||= 'DEMO-CT-'+String(index+1).padStart(5,'0'); point.material.supplier ||= ['示例供应商 A','示例供应商 B','示例供应商 C'][index%3]; } }));
+// Demo quota values only; production uses the shared token-to-quota result.
+V3_CALL_LOGS.forEach((record,index)=>{ record.consumedQuota ??= record.counted ? [1,2,3][index%3] : 0; });
 document.getElementById('ipadMode').onclick = () => setPrototypeMode('ipad');
 document.getElementById('adminMode').onclick = () => setPrototypeMode('admin');
 document.getElementById('zhaocaiAdminMode').onclick = () => setPrototypeMode('zhaocai');

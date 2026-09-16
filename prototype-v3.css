@@ -503,6 +503,9 @@
 .zc-third-filters label{display:flex;flex-direction:column;gap:7px;color:#526171;min-width:0}
 .zc-third-filters input,.zc-third-filters select{height:34px;min-width:0;width:100%;border:1px solid #d5dbe1;border-radius:4px;background:#fff;padding:0 9px;color:#344455;font:inherit}
 .zc-third-filter-actions{display:flex;align-items:end;gap:8px}
+.zc-third-date{grid-column:span 2;display:flex;flex-direction:column;gap:7px;color:#526171}
+.zc-third-date>div{display:flex;align-items:center;gap:10px}
+.zc-third-date input{flex:1;min-width:0}
 .zc-third-filter-actions .v3-btn{height:34px;border-radius:4px}
 .zc-third-party .zc-toolbar{align-items:center;flex:none;margin:18px 0 12px}
 .zc-toolbar button:disabled{opacity:.45;cursor:not-allowed}
