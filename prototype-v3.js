@@ -1,3 +1,105 @@
+const V3_CAMERAS = [
+ {id:'nw',x:0,y:0,dx:-1,dy:-1,angle:45,label:'从左上向右下看'},
+ {id:'n',x:50,y:0,dx:0,dy:-1,angle:90,label:'从上向下看'},
+ {id:'ne',x:100,y:0,dx:1,dy:-1,angle:135,label:'从右上向左下看'},
+ {id:'e',x:100,y:50,dx:1,dy:0,angle:180,label:'从右向左看'},
+ {id:'se',x:100,y:100,dx:1,dy:1,angle:225,label:'从右下向左上看'},
+ {id:'s',x:50,y:100,dx:0,dy:1,angle:270,label:'从下向上看'},
+ {id:'sw',x:0,y:100,dx:-1,dy:1,angle:315,label:'从左下向右上看'},
+ {id:'w',x:0,y:50,dx:-1,dy:0,angle:0,label:'从左向右看'}
+];
+function v3CameraOverlay(box, editable) {
+ const selected=V3_CAMERAS.find(c=>c.id===box.view);
+ const arrow=selected ? '<svg class="v3-view-arrow" data-view="'+selected.id+'" viewBox="0 0 100 100" aria-hidden="true"><path d="'+v3ViewArrowPath(100,100,selected)+'"/></svg>' : '';
+ return arrow+(editable ? V3_CAMERAS.map(c=>'<button type="button" class="v3-camera '+(box.view===c.id?'selected':'')+'" style="left:calc('+c.x+'% + '+c.dx*36+'px);top:calc('+c.y+'% + '+c.dy*36+'px)" aria-label="'+c.label+'" title="'+c.label+'" aria-pressed="'+(box.view===c.id)+'" onpointerdown="event.stopPropagation()" ontouchstart="event.stopPropagation()" ontouchmove="event.stopPropagation()" ontouchend="event.stopPropagation()" onclick="v3ChooseCamera(event,&quot;'+c.id+'&quot;)"><svg viewBox="0 0 24 24" style="transform:rotate('+c.angle+'deg)" aria-hidden="true"><rect x="3" y="7" width="11" height="10" rx="2"/><path d="m14 10 6-4v12l-6-4z"/></svg></button>').join('') : '');
+}
+function v3ChooseCamera(event,id) {
+ event.stopPropagation();
+ if (!S.floorDraftBox) return;
+ S.floorDraftBox.view=S.floorDraftBox.view===id ? null : id;
+ const element=document.querySelector('.v3-crop-canvas .v3-crop-box');
+ if (element) {
+  element.querySelectorAll('.v3-camera,.v3-view-arrow').forEach(node=>node.remove());
+  element.insertAdjacentHTML('beforeend',v3CameraOverlay(S.floorDraftBox,true));
+  v3LayoutFloorBoxes(element.closest('.v3-crop-canvas'));
+  const hint=document.querySelector('.v3-crop-actions>span');
+  if (hint) hint.textContent=S.floorDraftBox.view ? V3_CAMERAS.find(c=>c.id===S.floorDraftBox.view).label+' · 再点可取消' : '点击摄像头选择视角，也可直接确定';
+ } else render();
+}
+function v3ViewArrowPath(width,height,camera) {
+ // Equal perpendicular clearance from the rectangle edges, including corners.
+ const inset=Math.min(30,Math.min(width,height)*.12);
+ const start={x:camera.dx ? (camera.dx<0 ? inset : width-inset) : width/2,
+              y:camera.dy ? (camera.dy<0 ? inset : height-inset) : height/2};
+ const end={x:width/2,y:height/2};
+ const length=Math.hypot(end.x-start.x,end.y-start.y);
+ const ux=(end.x-start.x)/length,uy=(end.y-start.y)/length;
+ const available=length;
+ const head=Math.min(36,available*.34), half=Math.min(30,available*.28),shaft=Math.min(2.5,half*.16);
+ const base={x:end.x-ux*head,y:end.y-uy*head};
+ const neck={x:end.x-ux*head*.68,y:end.y-uy*head*.68};
+ const offset=(p,n)=>`${p.x-uy*n},${p.y+ux*n}`;
+ return `M ${offset(start,shaft)} L ${offset(neck,shaft)} L ${offset(base,half)} L ${end.x},${end.y} L ${offset(base,-half)} L ${offset(neck,-shaft)} L ${offset(start,-shaft)} Z`;
+}
+function v3MaximumFloorZoom(canvas) {
+ if (!S.floorDraftBox) return 12;
+ const frame=v3FloorImageFrame(canvas,1),box=S.floorDraftBox;
+ return Math.min(12,(frame.canvasWidth-152)/(frame.width*box.w/100),(frame.canvasHeight-152)/(frame.height*box.h/100));
+}
+let v3ViewportAnimation=0;
+function v3RefreshFloorPicker() {
+ const canvas=document.querySelector('.v3-crop-canvas');
+ if(!canvas) { render();return; }
+ canvas.querySelectorAll('.v3-crop-box').forEach(node=>node.remove());
+ if(S.floorDraftBox) canvas.insertAdjacentHTML('beforeend',v3FloorBox(S.floorDraftBox,'editable'));
+ const dialog=canvas.closest('.v3-dialog');
+ dialog.querySelector('.v3-dialog-foot .primary').disabled=!S.floorDraftBox;
+ dialog.querySelector('.v3-crop-actions button').disabled=!S.floorDraftBox;
+ dialog.querySelector('.v3-crop-actions>span').textContent=!S.floorDraftBox ? '拖动框选要生成的空间' : S.floorDraftBox.view ? V3_CAMERAS.find(c=>c.id===S.floorDraftBox.view).label+' · 再点可取消' : '点击摄像头选择视角，也可直接确定';
+ v3LayoutFloorBoxes(canvas);
+}
+function v3AnimateFloorViewport(zoom,focus,finish,durationMs=520) {
+ const canvas=document.querySelector('.v3-crop-canvas');
+ const token=++v3ViewportAnimation;
+ if (!canvas) { S.floorDraftZoom=zoom;S.floorFocus=focus;if(finish)finish();return; }
+ const startZoom=S.floorDraftZoom||1,startFocus=S.floorFocus||{x:50,y:50},endFocus=focus||{x:50,y:50};
+ S.floorZoomTarget=zoom;
+ const start=performance.now();
+ const duration=window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : durationMs;
+ canvas.classList.add('v3-viewport-animating');
+ function step(now) {
+  if(token!==v3ViewportAnimation) return;
+  if(!canvas.isConnected) { S.floorZoomTarget=null;return; }
+  const progress=duration ? Math.min(1,(now-start)/duration) : 1;
+  const ease=durationMs<520 ? 1-(1-progress)**3 : (progress<.5 ? 4*progress**3 : 1-(-2*progress+2)**3/2);
+  S.floorDraftZoom=startZoom+(zoom-startZoom)*ease;
+  // Interpolate translation directly to avoid a curved pan during large zooms.
+  S.floorFocus={
+   x:50-((50-startFocus.x)*startZoom*(1-ease)+(50-endFocus.x)*zoom*ease)/S.floorDraftZoom,
+   y:50-((50-startFocus.y)*startZoom*(1-ease)+(50-endFocus.y)*zoom*ease)/S.floorDraftZoom
+  };
+  v3LayoutFloorBoxes(canvas);
+  const label=document.getElementById('v3FloorZoomLabel');
+  if(label)label.textContent=Math.round(S.floorDraftZoom*100)+'%';
+  if(progress<1) requestAnimationFrame(step);
+  else { S.floorFocus=focus;S.floorZoomTarget=null;canvas.classList.remove('v3-viewport-animating');if(finish)finish(); }
+ }
+ requestAnimationFrame(step);
+}
+function v3FocusSelection() {
+ const canvas=document.querySelector('.v3-crop-canvas');
+ if (!canvas || !S.floorDraftBox) return;
+ const f=v3FloorImageFrame(canvas,1), b=S.floorDraftBox;
+ const w=f.width*b.w/100,h=f.height*b.h/100;
+ const fit=Math.min((f.canvasWidth-152)/w,(f.canvasHeight-152)/h,12);
+ const small=w*(S.floorDraftZoom||1)<220 || h*(S.floorDraftZoom||1)<180;
+ const current=v3FloorImageFrame(canvas,S.floorDraftZoom||1);
+ const clipped=current.left+b.x/100*current.width<64 || current.top+b.y/100*current.height<64 || current.left+(b.x+b.w)/100*current.width>f.canvasWidth-64 || current.top+(b.y+b.h)/100*current.height>f.canvasHeight-64;
+ if (small || S.floorFocus || clipped) {
+  S.floorDraftZoom=Math.max(.25, small ? fit : Math.min(S.floorDraftZoom||1,fit));
+  S.floorFocus={x:b.x+b.w/2,y:b.y+b.h/2};
+ }
+}
 /* V3 requirement-aligned prototype. Loaded after the original demo and intentionally
    redefines the screen functions while preserving the existing preview shell. */
 
@@ -274,7 +376,7 @@ function v3FloorBox(box, className = '') {
   const handles = editable
     ? ['nw', 'ne', 'se', 'sw'].map(direction => `<i data-v3-resize="${direction}" aria-label="调整框选范围" onpointerdown="v3ResizeFloorBox(event,'${direction}')" ontouchstart="event.stopPropagation()" ontouchmove="event.stopPropagation()" ontouchend="event.stopPropagation()"></i>`).join('')
     : '<i></i><i></i><i></i><i></i>';
-  return `<span class="v3-crop-box ${className}" data-floor-x="${box.x}" data-floor-y="${box.y}" data-floor-w="${box.w}" data-floor-h="${box.h}" style="left:${box.x}%;top:${box.y}%;width:${box.w}%;height:${box.h}%">${handles}</span>`;
+  return `<span class="v3-crop-box ${className}" data-floor-x="${box.x}" data-floor-y="${box.y}" data-floor-w="${box.w}" data-floor-h="${box.h}" style="left:${box.x}%;top:${box.y}%;width:${box.w}%;height:${box.h}%">${handles}${v3CameraOverlay(box, editable)}</span>`;
 }
 
 function source() {
@@ -327,6 +429,7 @@ function openGeneratePicker(kind) {
     S.floorDraftName = S.floorName || V3_FLOORS[0].name;
     S.floorDraftBox = S.floorBox ? { ...S.floorBox } : { x: 8, y: 50, w: 30, h: 40 };
     S.floorDraftIndex = Math.max(0, V3_FLOORS.findIndex(item => item.image === S.floorDraftImage));
+    if (S.floorBox && S.floorViewport) { S.floorDraftZoom=S.floorViewport.zoom; S.floorFocus=S.floorViewport.focus; }
   } else {
     S.styleDraftImage = S.styleImage || V3_STYLES[0].image;
     S.styleDraftName = S.styleName || V3_STYLES[0].name;
@@ -385,7 +488,7 @@ function confirmGeneratePicker() {
   if (S.flowModal === 'floor') {
     S.floorImage = S.floorDraftImage;
     S.floorName = S.floorDraftName;
-    S.floorBox = { ...S.floorDraftBox };
+    S.floorBox = { ...S.floorDraftBox }; S.floorViewport={zoom:S.floorDraftZoom||1,focus:S.floorFocus ? {...S.floorFocus} : null};
   } else {
     S.styleImage = S.styleDraftImage;
     S.styleName = S.styleDraftName;
@@ -395,6 +498,7 @@ function confirmGeneratePicker() {
 }
 
 function v3FloorPointer(event) {
+  if (event.currentTarget.classList.contains('v3-viewport-animating')) return;
   if (event.button !== undefined && event.button !== 0) return;
   const canvas = event.currentTarget;
   const rect = canvas.getBoundingClientRect();
@@ -430,7 +534,7 @@ function resetFloorBox() {
 function generatePickerDialog() {
   if (S.flowModal === 'floor') {
     return `<div class="v3-mask"><section class="v3-dialog" role="dialog" aria-modal="true" aria-label="选择户型图">
-      <header class="v3-dialog-head"><div><h2>选择户型图</h2><p>拖动画框</p></div><button class="v3-icon-btn" aria-label="关闭" onclick="closeGeneratePicker()">×</button></header>
+      <header class="v3-dialog-head"><div><h2>选择户型图</h2><p>框选空间，可点击摄像头指定视角</p></div><button class="v3-icon-btn" aria-label="关闭" onclick="closeGeneratePicker()">×</button></header>
       <div class="v3-dialog-body"><div class="v3-floor-picker">
         <aside class="v3-picker-list"><div class="v3-picker-list-head"><b>预设户型</b><span class="v3-count">${V3_FLOORS.length}</span></div><div class="v3-mini-grid">
           ${V3_FLOORS.map((item, index) => `<button class="v3-mini-card ${S.floorDraftIndex === index ? 'on' : ''}" onclick="pickV3Floor(${index})"><img src="${item.image}" alt="${v3Esc(item.name)}"><span>${v3Esc(item.name)}</span></button>`).join('')}
@@ -601,7 +705,6 @@ function materialPrepareScreen() {
 function materialSourceMenu() {
   return `<div class="v3-source-menu">
     <button onclick="openMaterialSource('tiangong')">天工云仓物料库</button>
-    <button onclick="openMaterialSource('zhaocai')">兆材云库</button>
     <button onclick="openMaterialSource('rfid')">RFID识别</button>
     <button onclick="openMaterialSource('local')">本地上传</button>
   </div>`;
@@ -916,7 +1019,7 @@ function admin() {
   const rows = V3_ADMIN_ITEMS[S.adminSection]
     .map((item, index) => ({ ...item, index }))
     .filter(item => (!S.adminQuery || item.name.toLowerCase().includes(S.adminQuery.toLowerCase())) && (S.adminStatus === 'all' || item.status === S.adminStatus));
-  const tableRows = rows.map((item, rowIndex) => `<tr><td>${rowIndex + 1}</td><td><img class="v3-table-thumb" src="${item.image}" alt="${v3Esc(item.name)}"></td><td><b>${v3Esc(item.name)}</b></td><td>${item.sort}</td><td><span class="v3-status ${item.status === '停用' ? 'fail' : ''}">${item.status}</span></td><td>${item.operator}<br><small>${item.updatedAt}</small></td><td><div class="v3-admin-actions"><button onclick="openAdminEdit(${item.index})">编辑</button><button onclick="toggleAdminStatus(${item.index})">${item.status === '启用' ? '停用' : '启用'}</button></div></td></tr>`).join('');
+  const tableRows = rows.map((item, rowIndex) => `<tr><td>${rowIndex + 1}</td><td><img class="v3-table-thumb" src="${item.image}" alt="${v3Esc(item.name)}"></td><td><b>${v3Esc(item.name)}</b></td><td>${item.sort}</td><td><span class="v3-status ${item.status === '停用' ? 'fail' : ''}">${item.status}</span></td><td>${item.operator}<br><small>${item.updatedAt}</small></td><td><div class="v3-admin-actions"><button onclick="openAdminEdit(${item.index})">编辑</button><button class="v3-delete-action" onclick="deleteV3AdminItem(${item.index})">删除</button><button onclick="toggleAdminStatus(${item.index})">${item.status === '启用' ? '停用' : '启用'}</button></div></td></tr>`).join('');
   const content = `<section class="v3-admin-card"><div class="v3-admin-title"><div><h1>${labels[S.adminSection]}</h1><p>每条配置对应一张图片</p></div><button class="v3-btn primary" onclick="openAdminModal()">＋ 新增</button></div><div class="v3-admin-filters"><input placeholder="搜索名称" value="${v3Esc(S.adminQuery)}" oninput="S.adminQuery=this.value"><select onchange="S.adminStatus=this.value;render()"><option value="all">全部状态</option><option ${S.adminStatus === '启用' ? 'selected' : ''}>启用</option><option ${S.adminStatus === '停用' ? 'selected' : ''}>停用</option></select><button class="v3-btn" onclick="render()">查询</button></div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>序号</th><th>图片</th><th>名称</th><th>排序</th><th>状态</th><th>操作人 / 时间</th><th>操作</th></tr></thead><tbody>${tableRows || '<tr><td colspan="7">暂无记录</td></tr>'}</tbody></table></div></section>`;
   return v3AdminFrame(labels[S.adminSection], content, S.v3AdminModal ? v3AdminItemDialog() : '');
 }
@@ -1001,12 +1104,34 @@ function v3CallImagesCell(log) {
   return `<div class="v3-call-table-pair"><div class="v3-call-table-image">${v3FloorThumb(log)}<small>户型图</small></div><b aria-hidden="true">→</b>${result}</div>`;
 }
 
+function v3FilteredCalls() {
+ const query=String(S.adminQuery||'').trim();
+ return V3_CALL_LOGS.filter(log=>(!query||log.operator.includes(query))&&(!S.callType||log.type===S.callType)&&(!S.callStatus||log.status===S.callStatus)&&(!S.callStart||log.time.slice(0,10)>=S.callStart)&&(!S.callEnd||log.time.slice(0,10)<=S.callEnd));
+}
+function v3ToggleCall(id,checked) {
+ const chosen=new Set(S.callSelected||[]);if(checked)chosen.add(id);else chosen.delete(id);S.callSelected=[...chosen];render();
+}
+function v3SelectAllCalls(checked) { S.callSelected=checked?v3FilteredCalls().map(log=>log.id):[];render(); }
+function v3ResetCallFilters() { S.adminQuery='';S.callType='';S.callStatus='';S.callStart='';S.callEnd='';S.callSelected=[];render(); }
+function v3ExportCalls(id) {
+ const ids=id?[id]:(S.callSelected||[]);
+ const records=(id?V3_CALL_LOGS:v3FilteredCalls()).filter(log=>ids.includes(log.id)&&log.type==='材质替换');
+ if(!records.length){toast('请选择材质替换记录');return;}
+ S.callExport=records;render();
+}
+function v3ExportDialog() {
+ const records=S.callExport||[];
+ const rows=records.flatMap(log=>(log.points||[]).map((point,i)=>({log,point,i})));
+ return '<div class="v3-mask"><section class="v3-admin-dialog v3-export-dialog" role="dialog" aria-modal="true" aria-label="导出用料清单"><header class="v3-dialog-head"><div><h2>导出用料清单</h2><p>Excel · '+records.length+' 条材质替换记录 · '+rows.length+' 条物料明细</p></div><button class="v3-icon-btn" aria-label="关闭导出" onclick="S.callExport=null;render()">×</button></header><div class="v3-dialog-body"><div class="v3-export-note">按标点展开物料明细，包含平台编号与供应商名称</div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>操作人</th><th>标点</th><th>物料名称</th><th>平台编号</th><th>供应商名称</th></tr></thead><tbody>'+rows.map(({log,point,i})=>'<tr><td>'+v3Esc(log.operator)+'</td><td>'+(i+1)+'</td><td>'+v3Esc(point.material.name||'本地上传物料')+'</td><td>'+v3Esc(point.material.platformCode||'—')+'</td><td>'+v3Esc(point.material.supplier||'—')+'</td></tr>').join('')+'</tbody></table></div></div><footer class="v3-dialog-foot"><button class="v3-btn" onclick="S.callExport=null;render()">取消</button><button class="v3-btn primary" onclick="toast(&quot;Excel导出交互演示，正式版将下载用料清单&quot;)">导出 Excel</button></footer></section></div>';
+}
 function v3CallLogScreen() {
-  const query = String(S.adminQuery || '').trim();
-  const rows = V3_CALL_LOGS.filter(log => !query || log.operator.includes(query) || log.type.includes(query) || log.time.includes(query) || (log.generatedAt || '').includes(query));
-  const tableRows = rows.map((log, index) => `<tr><td>${index + 1}</td><td>${v3CallImagesCell(log)}</td><td><b>${log.type}</b></td><td>${log.operator}</td><td><span class="v3-call-time">${log.time}</span></td><td><span class="v3-call-time ${log.generatedAt ? '' : 'empty'}">${log.generatedAt || '未生成'}</span></td><td><span class="v3-status ${log.status === '失败' ? 'fail' : ''}">${log.status}</span></td><td><div class="v3-admin-actions"><button onclick="openV3CallDetail('${log.id}')">查看</button></div></td></tr>`).join('');
-  const content = `<section class="v3-admin-card"><div class="v3-admin-title"><div><h1>创作记录</h1><p>查看创作图片</p></div></div><div class="v3-admin-filters"><input placeholder="搜索操作人或创作类型" value="${v3Esc(S.adminQuery)}" oninput="S.adminQuery=this.value"><button class="v3-btn" onclick="render()">查询</button></div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>序号</th><th>相关图片</th><th>创作类型</th><th>操作人</th><th>创作时间</th><th>生成时间</th><th>状态</th><th>操作</th></tr></thead><tbody>${tableRows}</tbody></table></div></section>`;
-  return v3AdminFrame('创作记录', content, S.v3CallDetail ? v3CallDetailDialog() : '');
+ const rows=v3FilteredCalls(), selected=new Set(S.callSelected||[]);
+ const count=rows.filter(log=>selected.has(log.id)).length;
+ const exportCount=rows.filter(log=>selected.has(log.id)&&log.type==='材质替换').length;
+ const option=(values,current)=>values.map(value=>'<option '+(value===current?'selected':'')+'>'+value+'</option>').join('');
+ const tableRows=rows.map((log,index)=>'<tr class="'+(selected.has(log.id)?'v3-row-selected':'')+'"><td><input type="checkbox" aria-label="选择记录 '+v3Esc(log.id)+'" '+(selected.has(log.id)?'checked':'')+' onchange="v3ToggleCall(&quot;'+log.id+'&quot;,this.checked)"></td><td>'+(index+1)+'</td><td>'+v3CallImagesCell(log)+'</td><td><b>'+log.type+'</b></td><td>'+log.operator+'</td><td><span class="v3-call-time">'+log.time+'</span></td><td><span class="v3-call-time">'+(log.generatedAt||'未生成')+'</span></td><td><span class="v3-status '+(log.status==='失败'?'fail':'')+'">'+log.status+'</span></td><td><div class="v3-admin-actions"><button onclick="openV3CallDetail(&quot;'+log.id+'&quot;)">查看</button>'+(log.type==='材质替换'?'<button onclick="v3ExportCalls(&quot;'+log.id+'&quot;)">导出</button>':'<span class="v3-export-unavailable">—</span>')+'</div></td></tr>').join('');
+ const content='<section class="v3-admin-card"><div class="v3-admin-title"><div><h1>创作记录</h1><p>查看创作结果与材质替换用料</p></div></div><div class="v3-call-filters"><label>操作人<input placeholder="请输入操作人" value="'+v3Esc(S.adminQuery||'')+'" oninput="S.adminQuery=this.value" onkeydown="if(event.key===&quot;Enter&quot;){S.callSelected=[];render()}"></label><label>创作类型<select onchange="S.callType=this.value;S.callSelected=[];render()"><option value="">全部类型</option>'+option(['生成效果图','材质替换'],S.callType)+'</select></label><label>创作时间<div class="v3-date-range"><input type="date" aria-label="开始日期" value="'+(S.callStart||'')+'" onchange="S.callStart=this.value;S.callSelected=[];render()"><span>至</span><input type="date" aria-label="结束日期" value="'+(S.callEnd||'')+'" onchange="S.callEnd=this.value;S.callSelected=[];render()"></div></label><label>状态<select onchange="S.callStatus=this.value;S.callSelected=[];render()"><option value="">全部状态</option>'+option(['成功','失败','处理中','已取消'],S.callStatus)+'</select></label><div class="v3-filter-actions"><button class="v3-btn primary" onclick="S.callSelected=[];render()">查询</button><button class="v3-btn" onclick="v3ResetCallFilters()">重置</button></div></div><div class="v3-call-toolbar"><button class="v3-btn primary" '+(!exportCount?'disabled':'')+' onclick="v3ExportCalls()">批量导出</button><span>已选择 <b>'+count+'</b> 条</span><small>仅导出材质替换用料</small><span class="v3-total-count">共 '+rows.length+' 条记录</span></div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th><input type="checkbox" aria-label="全选当前筛选记录" '+(rows.length&&count===rows.length?'checked':'')+' onchange="v3SelectAllCalls(this.checked)"></th><th>序号</th><th>相关图片</th><th>创作类型</th><th>操作人</th><th>创作时间</th><th>生成时间</th><th>状态</th><th>操作</th></tr></thead><tbody>'+(tableRows||'<tr><td colspan="9" class="v3-call-empty">暂无符合条件的创作记录</td></tr>')+'</tbody></table></div></section>';
+ return v3AdminFrame('创作记录',content,S.callExport?v3ExportDialog():S.v3CallDetail?v3CallDetailDialog():'');
 }
 
 function openV3CallDetail(id) {
@@ -1024,7 +1149,7 @@ function v3CallDetailDialog() {
     ? `<div class="v3-call-result-empty fail"><span aria-hidden="true">!</span><div><b>未生成效果图</b><small>任务执行失败，未产生结果文件</small></div></div>`
     : `<figure class="v3-call-output-card"><img src="${log.resultImage}" alt="${v3Esc(log.resultLabel || '最终效果图')}"><figcaption>${v3Esc(log.resultLabel || '最终效果图')}</figcaption></figure>`;
   const generated = `<div class="v3-call-detail-stack"><section class="v3-call-detail-section"><div class="v3-call-section-title"><div><h3>输入内容</h3><p>本次创作使用的户型与风格参考</p></div><span>${inputItems.length} 项</span></div><div class="v3-call-images">${inputCards}</div></section><section class="v3-call-detail-section"><div class="v3-call-section-title"><div><h3>生成结果</h3><p>${failed ? '任务未成功完成' : '本次任务生成的最终图片'}</p></div></div>${generatedResult}</section></div>`;
-  const material = `<section class="v3-call-detail-section"><div class="v3-call-section-title"><div><h3>创作内容</h3><p>查看原图、替换结果与标点物料</p></div></div><div class="v3-material-call-detail"><section><h3>带点原图</h3>${v3MarkedEffect(log)}</section><aside><div class="v3-call-result"><h3>最终替换效果图</h3><img src="${log.resultImage || log.mainImage}" alt="最终替换效果图"></div><div class="v3-point-material-list"><h3>标点物料</h3>${(log.points || []).map((point, index) => `<article><em>${index + 1}</em><img src="${point.material.image}" alt="${v3Esc(point.material.name || '本地物料图片')}"><span>${point.material.name ? `<b>${v3Esc(point.material.name)}</b>` : ''}${point.material.category ? `<small>${v3Esc(point.material.category)}</small>` : ''}<small>${v3Esc(point.material.source)}</small></span></article>`).join('')}</div></aside></div></section>`;
+  const material = `<section class="v3-call-detail-section"><div class="v3-call-section-title"><div><h3>创作内容</h3><p>查看原图、替换结果与标点物料</p></div></div><div class="v3-material-call-detail"><section><h3>带点原图</h3>${v3MarkedEffect(log)}</section><aside><div class="v3-call-result"><h3>最终替换效果图</h3><img src="${log.resultImage || log.mainImage}" alt="最终替换效果图"></div><div class="v3-point-material-list"><h3>标点物料</h3>${(log.points || []).map((point, index) => `<article><em>${index + 1}</em><img src="${point.material.image}" alt="${v3Esc(point.material.name || '本地物料图片')}"><span>${point.material.name ? `<b>${v3Esc(point.material.name)}</b>` : ''}${point.material.category ? `<small>${v3Esc(point.material.category)}</small>` : ''}<small>${v3Esc(point.material.source)}</small><small>平台编号：${v3Esc(point.material.platformCode || '—')}</small><small>供应商：${v3Esc(point.material.supplier || '—')}</small></span></article>`).join('')}</div></aside></div></section>`;
   const failure = failed ? `<div class="v3-call-failure" role="status" aria-atomic="true"><span aria-hidden="true">!</span><div><b>创作失败</b><p>${v3Esc(log.failureReason || '任务执行失败，本次未生成结果。')}</p></div></div>` : '';
   return `<div class="v3-mask"><section class="v3-admin-dialog v3-call-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="v3-call-detail-title"><header class="v3-call-detail-head"><div class="v3-call-detail-heading"><div><span class="v3-call-detail-eyebrow">创作记录详情</span><h2 id="v3-call-detail-title">${v3Esc(log.type)}</h2></div><span class="v3-detail-status ${statusClass}" role="status" aria-atomic="true">${v3Esc(log.status)}</span></div><button class="v3-icon-btn" aria-label="关闭创作记录详情" onclick="S.v3CallDetail=null;render()">×</button></header><div class="v3-dialog-body v3-call-detail-body"><div class="v3-call-meta"><div><span>记录编号</span><b>${v3Esc(log.id)}</b></div><div><span>操作人</span><b>${v3Esc(log.operator)}</b></div><div><span>创作时间</span><b>${v3Esc(log.time)}</b></div><div><span>生成时间</span><b class="${log.generatedAt ? '' : 'empty'}">${v3Esc(log.generatedAt || '未生成')}</b></div></div>${failure}${log.type === '材质替换' ? material : generated}</div><footer class="v3-dialog-foot v3-call-detail-foot"><button class="v3-btn" onclick="S.v3CallDetail=null;render()">关闭</button></footer></section></div>`;
 }
@@ -1240,8 +1365,9 @@ function openGeneratePicker(kind) {
     S.floorDraftImage = S.floorImage || V3_FLOORS[0].image;
     S.floorDraftName = S.floorImage ? S.floorName : V3_FLOORS[0].name;
     S.floorDraftBox = S.floorBox ? { ...S.floorBox } : null;
-    S.floorDraftZoom = 1;
+    S.floorDraftZoom = 1; S.floorFocus = null;
     S.floorDraftIndex = Math.max(0, V3_FLOORS.findIndex(item => item.image === S.floorDraftImage));
+    if (S.floorBox && S.floorViewport) { S.floorDraftZoom=S.floorViewport.zoom; S.floorFocus=S.floorViewport.focus; }
   } else {
     S.styleDraftImage = S.styleImage || V3_STYLES[0].image;
     S.styleDraftName = S.styleImage ? S.styleName : V3_STYLES[0].name;
@@ -1257,7 +1383,7 @@ function pickV3Floor(index) {
   S.floorDraftImage = item.image;
   S.floorDraftName = item.name;
   S.floorDraftBox = null;
-  S.floorDraftZoom = 1;
+  S.floorDraftZoom = 1; S.floorFocus = null;
   render();
 }
 
@@ -1283,7 +1409,7 @@ function v3GenerateFileChosen(event, kind) {
     S.floorDraftImage = url;
     S.floorDraftName = '';
     S.floorDraftBox = null;
-    S.floorDraftZoom = 1;
+    S.floorDraftZoom = 1; S.floorFocus = null;
   } else {
     S.styleDraftIndex = -1;
     S.styleDraftImage = url;
@@ -1300,7 +1426,7 @@ function confirmGeneratePicker() {
     }
     S.floorImage = S.floorDraftImage;
     S.floorName = S.floorDraftName;
-    S.floorBox = { ...S.floorDraftBox };
+    S.floorBox = { ...S.floorDraftBox }; S.floorViewport={zoom:S.floorDraftZoom||1,focus:S.floorFocus ? {...S.floorFocus} : null};
   } else {
     S.styleImage = S.styleDraftImage;
     S.styleName = S.styleDraftName;
@@ -1319,8 +1445,8 @@ function v3FloorImageFrame(canvas, zoom = 1) {
   const drawnWidth = naturalWidth * fit * zoom;
   const drawnHeight = naturalHeight * fit * zoom;
   return {
-    left: (width - drawnWidth) / 2,
-    top: (height - drawnHeight) / 2,
+    left: (width - drawnWidth) / 2 + (canvas.classList.contains('v3-crop-canvas') && S.floorFocus ? (50-S.floorFocus.x)/100*drawnWidth : 0),
+    top: (height - drawnHeight) / 2 + (canvas.classList.contains('v3-crop-canvas') && S.floorFocus ? (50-S.floorFocus.y)/100*drawnHeight : 0),
     width: drawnWidth,
     height: drawnHeight,
     canvasWidth: width,
@@ -1351,6 +1477,12 @@ function v3PositionFloorBox(canvas, element, box, zoom = 1) {
   element.dataset.floorY = box.y;
   element.dataset.floorW = box.w;
   element.dataset.floorH = box.h;
+  const arrow=element.querySelector && element.querySelector('.v3-view-arrow');
+  if(arrow) {
+    const w=box.w/100*frame.width,h=box.h/100*frame.height;
+    arrow.setAttribute('viewBox',`0 0 ${w} ${h}`);
+    arrow.querySelector('path').setAttribute('d',v3ViewArrowPath(w,h,V3_CAMERAS.find(c=>c.id===arrow.dataset.view)));
+  }
 }
 
 function v3LayoutFloorBoxes(root = document) {
@@ -1366,6 +1498,7 @@ function v3LayoutFloorBoxes(root = document) {
       return;
     }
     const zoom = canvas.classList.contains('v3-crop-canvas') ? (S.floorDraftZoom || 1) : 1;
+    if (canvas.classList.contains('v3-crop-canvas')) { const f=v3FloorImageFrame(canvas,zoom); image.style.transform=`translate(${S.floorFocus ? (50-S.floorFocus.x)/100*f.width : 0}px,${S.floorFocus ? (50-S.floorFocus.y)/100*f.height : 0}px) scale(${zoom})`; }
     canvas.querySelectorAll('.v3-crop-box').forEach(element => {
       const box = {
         x: Number(element.dataset.floorX), y: Number(element.dataset.floorY),
@@ -1402,11 +1535,17 @@ function v3DrawDraftBox(start, current, canvas) {
 }
 
 function v3FinishDraftBox() {
-  if (!S.floorDraftBox || S.floorDraftBox.w < 6 || S.floorDraftBox.h < 6) S.floorDraftBox = null;
-  render();
+  if (!S.floorDraftBox || S.floorDraftBox.w < 2 || S.floorDraftBox.h < 2) S.floorDraftBox = null;
+  if (!S.floorDraftBox) { render();return; }
+  const oldZoom=S.floorDraftZoom||1,oldFocus=S.floorFocus;
+  v3FocusSelection();
+  const zoom=S.floorDraftZoom,focus=S.floorFocus;
+  S.floorDraftZoom=oldZoom;S.floorFocus=oldFocus;
+  v3AnimateFloorViewport(zoom,focus,v3RefreshFloorPicker);
 }
 
 function v3FloorPointer(event) {
+  if (S.floorDraftBox) return;
   if (event.pointerType === 'touch' || (event.button !== undefined && event.button !== 0)) return;
   event.preventDefault();
   const canvas = event.currentTarget;
@@ -1430,8 +1569,9 @@ function v3ResizeFloorBox(event, direction) {
   event.preventDefault();
   const canvas = event.currentTarget.closest('.v3-crop-canvas');
   if (!canvas) return;
+  if (canvas.classList.contains('v3-viewport-animating')) return;
   const startBox = { ...S.floorDraftBox };
-  const minSize = 6;
+  const minSize = 2;
   const startLeft = startBox.x;
   const startTop = startBox.y;
   const startRight = startBox.x + startBox.w;
@@ -1447,7 +1587,7 @@ function v3ResizeFloorBox(event, direction) {
     if (direction.includes('e')) right = Math.min(100, Math.max(startLeft + minSize, point.x));
     if (direction.includes('n')) top = Math.max(0, Math.min(startBottom - minSize, point.y));
     if (direction.includes('s')) bottom = Math.min(100, Math.max(startTop + minSize, point.y));
-    S.floorDraftBox = { x: left, y: top, w: right - left, h: bottom - top };
+    S.floorDraftBox = { ...startBox, x: left, y: top, w: right - left, h: bottom - top };
     const box = canvas.querySelector('.v3-crop-box');
     if (box) v3PositionFloorBox(canvas, box, S.floorDraftBox, S.floorDraftZoom || 1);
   };
@@ -1455,7 +1595,7 @@ function v3ResizeFloorBox(event, direction) {
     removeEventListener('pointermove', move);
     removeEventListener('pointerup', up);
     removeEventListener('pointercancel', up);
-    render();
+    v3FinishDraftBox();
   };
   addEventListener('pointermove', move, { passive: false });
   addEventListener('pointerup', up);
@@ -1470,6 +1610,7 @@ function v3FloorTouchStart(event) {
     v3FloorTouchState = { mode: 'pinch', start: null, startDistance: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), startZoom: S.floorDraftZoom || 1 };
     return;
   }
+  if (S.floorDraftBox) { v3FloorTouchState.mode=''; return; }
   const touch = event.touches[0];
   v3FloorTouchState = { mode: 'draw', start: v3CropPoint(touch.clientX, touch.clientY, canvas), startDistance: 0, startZoom: S.floorDraftZoom || 1 };
 }
@@ -1501,22 +1642,29 @@ function v3FloorTouchEnd(event) {
 }
 
 function setFloorZoom(value) {
-  S.floorDraftZoom = Math.max(1, Math.min(3, Number(value) || 1));
-  const image = document.getElementById('v3FloorDraftImage');
-  const label = document.getElementById('v3FloorZoomLabel');
-  if (image) image.style.transform = `scale(${S.floorDraftZoom})`;
-  if (label) label.textContent = `${Math.round(S.floorDraftZoom * 100)}%`;
-  if (image) v3LayoutFloorBoxes(image.closest('.v3-crop-canvas'));
+  const canvas=document.querySelector('.v3-crop-canvas');
+  if(!canvas) return;
+  const maximum=v3MaximumFloorZoom(canvas);
+  const zoom=Math.max(Math.min(1,maximum),Math.min(maximum,Number(value)||1));
+  const box=S.floorDraftBox;
+  const focus=box ? {x:box.x+box.w/2,y:box.y+box.h/2} : null;
+  v3AnimateFloorViewport(zoom,focus,undefined,180);
+}
+
+function stepFloorZoom(delta) {
+  setFloorZoom((S.floorZoomTarget ?? S.floorDraftZoom ?? 1)+delta);
 }
 
 function v3FloorWheel(event) {
   event.preventDefault();
-  setFloorZoom((S.floorDraftZoom || 1) + (event.deltaY < 0 ? .2 : -.2));
+  stepFloorZoom(event.deltaY < 0 ? .2 : -.2);
 }
 
 function resetFloorBox() {
   S.floorDraftBox = null;
-  render();
+  const canvas=document.querySelector('.v3-crop-canvas');
+  if(canvas) { canvas.querySelectorAll('.v3-crop-box').forEach(box=>box.remove()); }
+  v3AnimateFloorViewport(1,null,v3RefreshFloorPicker);
 }
 
 function generatePickerDialog() {
@@ -1525,13 +1673,13 @@ function generatePickerDialog() {
       ? `<img src="${S.floorDraftImage}" alt="本地户型图">`
       : `<span class="v3-upload-copy"><strong>＋</strong>本地上传</span>`;
     return `<div class="v3-mask"><section class="v3-dialog" role="dialog" aria-modal="true" aria-label="选择户型图">
-      <header class="v3-dialog-head"><div><h2>选择户型图</h2><p>拖动画框</p></div><button class="v3-icon-btn" aria-label="关闭" onclick="closeGeneratePicker()">×</button></header>
+      <header class="v3-dialog-head"><div><h2>选择户型图</h2><p>框选空间，可点击摄像头指定视角</p></div><button class="v3-icon-btn" aria-label="关闭" onclick="closeGeneratePicker()">×</button></header>
       <div class="v3-dialog-body"><div class="v3-floor-picker">
         <aside class="v3-picker-list"><div class="v3-picker-list-head"><b>户型图</b><span class="v3-count">${V3_FLOORS.length}</span></div><div class="v3-mini-grid">
           <label class="v3-mini-card v3-unified-upload ${S.floorDraftIndex === -1 ? 'on local-selected' : ''}">${uploadContent}<input type="file" accept="image/png,image/jpeg" onchange="v3GenerateFileChosen(event,'floor')"></label>
           ${V3_FLOORS.map((item, index) => `<button class="v3-mini-card ${S.floorDraftIndex === index ? 'on' : ''}" onclick="pickV3Floor(${index})"><img src="${item.image}" alt="${v3Esc(item.name)}"><span>${v3Esc(item.name)}</span></button>`).join('')}
         </div></aside>
-        <div class="v3-crop-side"><div class="v3-crop-title"><span>${v3Esc(S.floorDraftName)}</span><div class="v3-zoom-controls"><button aria-label="缩小" onclick="setFloorZoom(S.floorDraftZoom-.25)">−</button><span id="v3FloorZoomLabel">${Math.round((S.floorDraftZoom || 1) * 100)}%</span><button aria-label="放大" onclick="setFloorZoom(S.floorDraftZoom+.25)">＋</button></div></div><div class="v3-crop-canvas fixed" onwheel="v3FloorWheel(event)" onpointerdown="v3FloorPointer(event)" ontouchstart="v3FloorTouchStart(event)" ontouchmove="v3FloorTouchMove(event)" ontouchend="v3FloorTouchEnd(event)"><img id="v3FloorDraftImage" src="${S.floorDraftImage}" alt="${v3Esc(S.floorDraftName)}" style="transform:scale(${S.floorDraftZoom || 1})">${v3FloorBox(S.floorDraftBox, 'editable')}</div><div class="v3-crop-actions"><span>框选识别范围</span><button class="v3-btn ghost" ${S.floorDraftBox ? '' : 'disabled'} onclick="resetFloorBox()">重画</button></div></div>
+        <div class="v3-crop-side"><div class="v3-crop-title"><span>${v3Esc(S.floorDraftName)}</span><div class="v3-zoom-controls"><button aria-label="缩小" onclick="stepFloorZoom(-.25)">−</button><span id="v3FloorZoomLabel">${Math.round((S.floorDraftZoom || 1) * 100)}%</span><button aria-label="放大" onclick="stepFloorZoom(.25)">＋</button></div></div><div class="v3-crop-canvas fixed" onwheel="v3FloorWheel(event)" onpointerdown="v3FloorPointer(event)" ontouchstart="v3FloorTouchStart(event)" ontouchmove="v3FloorTouchMove(event)" ontouchend="v3FloorTouchEnd(event)"><img id="v3FloorDraftImage" src="${S.floorDraftImage}" alt="${v3Esc(S.floorDraftName)}" style="transform:scale(${S.floorDraftZoom || 1})">${v3FloorBox(S.floorDraftBox, 'editable')}</div><div class="v3-crop-actions"><span>${S.floorDraftBox ? (S.floorDraftBox.view ? V3_CAMERAS.find(c=>c.id===S.floorDraftBox.view).label+' · 再点可取消' : '点击摄像头选择视角，也可直接确定') : '拖动框选要生成的空间'}</span><button class="v3-btn ghost" ${S.floorDraftBox ? '' : 'disabled'} onclick="resetFloorBox()">重画</button></div></div>
       </div></div>
       <footer class="v3-dialog-foot"><button class="v3-btn" onclick="closeGeneratePicker()">取消</button><button class="v3-btn primary" ${S.floorDraftBox ? '' : 'disabled'} onclick="confirmGeneratePicker()">确定</button></footer>
     </section></div>`;
@@ -1679,8 +1827,11 @@ function setPrototypeMode(mode) {
   render();
 }
 
+V3_CALL_LOGS.forEach(log=>(log.points||[]).forEach((point,index)=>{ if(point.material.source!=='本地上传') { point.material.platformCode ||= 'DEMO-CT-'+String(index+1).padStart(5,'0'); point.material.supplier ||= ['示例供应商 A','示例供应商 B','示例供应商 C'][index%3]; } }));
 document.getElementById('ipadMode').onclick = () => setPrototypeMode('ipad');
 document.getElementById('adminMode').onclick = () => setPrototypeMode('admin');
 document.getElementById('zhaocaiAdminMode').onclick = () => setPrototypeMode('zhaocai');
 render();
 fit();
+
+function deleteV3AdminItem(index) { const item=V3_ADMIN_ITEMS[S.adminSection][index];if(!item)return;if(confirm("确定删除“"+item.name+"”？已有创作记录不受影响。")){V3_ADMIN_ITEMS[S.adminSection].splice(index,1);render();} }
