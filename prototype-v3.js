@@ -1113,16 +1113,16 @@ function v3ToggleCall(id,checked) {
 }
 function v3SelectAllCalls(checked) { S.callSelected=checked?v3FilteredCalls().map(log=>log.id):[];render(); }
 function v3ResetCallFilters() { S.adminQuery='';S.callType='';S.callStatus='';S.callStart='';S.callEnd='';S.callSelected=[];render(); }
-function v3ExportCalls(id) {
+async function v3ExportCalls(id) {
+ if(S.callExportBusy)return;
  const ids=id?[id]:(S.callSelected||[]);
  const records=(id?V3_CALL_LOGS:v3FilteredCalls()).filter(log=>ids.includes(log.id)&&log.type==='材质替换');
  if(!records.length){toast('请选择材质替换记录');return;}
- S.callExport=records;render();
-}
-function v3ExportDialog() {
- const records=S.callExport||[];
- const rows=records.flatMap(log=>(log.points||[]).map((point,i)=>({log,point,i})));
- return '<div class="v3-mask"><section class="v3-admin-dialog v3-export-dialog" role="dialog" aria-modal="true" aria-label="导出用料清单"><header class="v3-dialog-head"><div><h2>导出用料清单</h2><p>Excel · '+records.length+' 条材质替换记录 · '+rows.length+' 条物料明细</p></div><button class="v3-icon-btn" aria-label="关闭导出" onclick="S.callExport=null;render()">×</button></header><div class="v3-dialog-body"><div class="v3-export-note">按标点展开物料明细，包含平台编号与供应商名称</div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>操作人</th><th>标点</th><th>物料名称</th><th>平台编号</th><th>供应商名称</th></tr></thead><tbody>'+rows.map(({log,point,i})=>'<tr><td>'+v3Esc(log.operator)+'</td><td>'+(i+1)+'</td><td>'+v3Esc(point.material.name||'本地上传物料')+'</td><td>'+v3Esc(point.material.platformCode||'—')+'</td><td>'+v3Esc(point.material.supplier||'—')+'</td></tr>').join('')+'</tbody></table></div></div><footer class="v3-dialog-foot"><button class="v3-btn" onclick="S.callExport=null;render()">取消</button><button class="v3-btn primary" onclick="toast(&quot;Excel导出交互演示，正式版将下载用料清单&quot;)">导出 Excel</button></footer></section></div>';
+ S.callExportBusy=true;
+ toast('正在生成 Excel…');
+ try { await downloadMaterialExcel(records); toast('Excel 已下载，可用 WPS 或 Excel 打开'); }
+ catch(error) { console.error(error); toast(error.message||'导出失败，请重试'); }
+ finally { S.callExportBusy=false; }
 }
 function v3CallLogScreen() {
  const rows=v3FilteredCalls(), selected=new Set(S.callSelected||[]);
@@ -1131,7 +1131,7 @@ function v3CallLogScreen() {
  const option=(values,current)=>values.map(value=>'<option '+(value===current?'selected':'')+'>'+value+'</option>').join('');
  const tableRows=rows.map((log,index)=>'<tr class="'+(selected.has(log.id)?'v3-row-selected':'')+'"><td><input type="checkbox" aria-label="选择记录 '+v3Esc(log.id)+'" '+(selected.has(log.id)?'checked':'')+' onchange="v3ToggleCall(&quot;'+log.id+'&quot;,this.checked)"></td><td>'+(index+1)+'</td><td>'+v3CallImagesCell(log)+'</td><td><b>'+log.type+'</b></td><td>'+log.operator+'</td><td><span class="v3-call-time">'+log.time+'</span></td><td><span class="v3-call-time">'+(log.generatedAt||'未生成')+'</span></td><td><span class="v3-status '+(log.status==='失败'?'fail':'')+'">'+log.status+'</span></td><td><div class="v3-admin-actions"><button onclick="openV3CallDetail(&quot;'+log.id+'&quot;)">查看</button>'+(log.type==='材质替换'?'<button onclick="v3ExportCalls(&quot;'+log.id+'&quot;)">导出</button>':'<span class="v3-export-unavailable">—</span>')+'</div></td></tr>').join('');
  const content='<section class="v3-admin-card"><div class="v3-admin-title"><div><h1>创作记录</h1><p>查看创作结果与材质替换用料</p></div></div><div class="v3-call-filters"><label>操作人<input placeholder="请输入操作人" value="'+v3Esc(S.adminQuery||'')+'" oninput="S.adminQuery=this.value" onkeydown="if(event.key===&quot;Enter&quot;){S.callSelected=[];render()}"></label><label>创作类型<select onchange="S.callType=this.value;S.callSelected=[];render()"><option value="">全部类型</option>'+option(['生成效果图','材质替换'],S.callType)+'</select></label><label>创作时间<div class="v3-date-range"><input type="date" aria-label="开始日期" value="'+(S.callStart||'')+'" onchange="S.callStart=this.value;S.callSelected=[];render()"><span>至</span><input type="date" aria-label="结束日期" value="'+(S.callEnd||'')+'" onchange="S.callEnd=this.value;S.callSelected=[];render()"></div></label><label>状态<select onchange="S.callStatus=this.value;S.callSelected=[];render()"><option value="">全部状态</option>'+option(['成功','失败','处理中','已取消'],S.callStatus)+'</select></label><div class="v3-filter-actions"><button class="v3-btn primary" onclick="S.callSelected=[];render()">查询</button><button class="v3-btn" onclick="v3ResetCallFilters()">重置</button></div></div><div class="v3-call-toolbar"><button class="v3-btn primary" '+(!exportCount?'disabled':'')+' onclick="v3ExportCalls()">批量导出</button><span>已选择 <b>'+count+'</b> 条</span><small>仅导出材质替换用料</small><span class="v3-total-count">共 '+rows.length+' 条记录</span></div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th><input type="checkbox" aria-label="全选当前筛选记录" '+(rows.length&&count===rows.length?'checked':'')+' onchange="v3SelectAllCalls(this.checked)"></th><th>序号</th><th>相关图片</th><th>创作类型</th><th>操作人</th><th>创作时间</th><th>生成时间</th><th>状态</th><th>操作</th></tr></thead><tbody>'+(tableRows||'<tr><td colspan="9" class="v3-call-empty">暂无符合条件的创作记录</td></tr>')+'</tbody></table></div></section>';
- return v3AdminFrame('创作记录',content,S.callExport?v3ExportDialog():S.v3CallDetail?v3CallDetailDialog():'');
+ return v3AdminFrame('创作记录',content,S.v3CallDetail?v3CallDetailDialog():'');
 }
 
 function openV3CallDetail(id) {
@@ -1827,6 +1827,27 @@ function setPrototypeMode(mode) {
   render();
 }
 
+// Additional fictitious records for filtering and single/batch export demonstrations.
+V3_CALL_LOGS.unshift(...Array.from({length:15},(_,index)=>{
+ const day=String(15-Math.floor(index/3)).padStart(2,'0');
+ const hour=String(16-index%3).padStart(2,'0');
+ const points=Array.from({length:1+index%4},(_,j)=>{
+   const materialIndex=(index+j)%MATERIAL_CATALOG.length;
+   const item=MATERIAL_CATALOG[materialIndex];
+   const local=index%5===4&&j===0;
+   return {x:22+j*17,y:38+j*9,material:{name:local?'本地上传物料':item.name,
+     category:local?'':item.categoryName,source:local?'本地上传':index%3===1?'RFID识别':'天工云仓物料库',
+     image:item.image,platformCode:local?'':'DEMO-CT-'+String(materialIndex+1).padStart(5,'0'),
+     supplier:local?'':['示例供应商 A','示例供应商 B','示例供应商 C'][materialIndex%3]}};
+ });
+ const mainImage=index%2?'prototype_assets/room-alt.jpg':'prototype_assets/room-original.jpg';
+ const resultImage='prototype_assets/room-replaced.jpg';
+ return {id:'DEMO-AI-202609'+day+String(15-index).padStart(3,'0'),institution:'示例设计机构',
+   operator:['示例操作人甲','示例操作人乙','示例操作人丙','示例操作人丁','高志远'][index%5],
+   type:'材质替换',time:'2026-09-'+day+' '+hour+':20',generatedAt:'2026-09-'+day+' '+hour+':22',
+   status:'成功',counted:true,mainImage,mainLabel:'示例空间',resultImage,resultLabel:'最终替换效果图',points,
+   inputs:[{label:'带点原图',image:mainImage},{label:'最终替换效果图',image:resultImage}]};
+}));
 V3_CALL_LOGS.forEach(log=>(log.points||[]).forEach((point,index)=>{ if(point.material.source!=='本地上传') { point.material.platformCode ||= 'DEMO-CT-'+String(index+1).padStart(5,'0'); point.material.supplier ||= ['示例供应商 A','示例供应商 B','示例供应商 C'][index%3]; } }));
 document.getElementById('ipadMode').onclick = () => setPrototypeMode('ipad');
 document.getElementById('adminMode').onclick = () => setPrototypeMode('admin');
