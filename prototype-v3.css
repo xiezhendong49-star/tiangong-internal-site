@@ -580,6 +580,8 @@
 .v3-camera svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round;pointer-events:none}
 .v3-camera:hover{border-color:#0799cc;color:#008bbd;background:#f0fbff}
 .v3-camera.selected{background:#0799cc;border-color:#fff;color:#fff;box-shadow:0 0 0 3px #0799cc55}
+.v3-camera-field{position:absolute;pointer-events:none;overflow:visible;z-index:3}
+.v3-camera-field-sector{fill:rgba(34,190,230,.24);stroke:rgba(0,156,203,.8);stroke-width:1.5;stroke-linejoin:round}
 .v3-camera:focus-visible{outline:3px solid #087fb0;outline-offset:3px}
 .v3-view-arrow{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;fill:none;stroke:#009bd0;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .v3-view-arrow path{vector-effect:non-scaling-stroke}
