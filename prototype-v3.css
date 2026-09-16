@@ -496,6 +496,14 @@
 .zc-side-sub{height:39px;display:flex;align-items:center;padding-left:48px;color:#465463;cursor:pointer}
 .zc-side-sub.active{background:#e8f5ff;color:#168df0;border-right:2px solid #168df0}
 .zc-sidebar>button.zc-side-sub{padding-left:48px;height:39px}
+.zc-prototype-guide{margin:4px 12px 14px;padding:10px 12px;background:#f2f8fe;border:1px dashed #a8cfee;border-radius:5px;color:#647c91;line-height:1.6}
+.zc-prototype-guide b{display:block;color:#397294;font-size:12px;margin-bottom:3px}
+.zc-prototype-guide span{font-size:11px}
+.zc-sidebar .zc-prototype-entry{margin:4px 9px;width:calc(100% - 18px);padding:0 8px!important;border:1px solid #86c5f3!important;border-radius:5px;background:#f0f8ff;color:#117bc1;display:flex;align-items:center;justify-content:space-between;gap:3px;font-size:11px;cursor:pointer}
+.zc-sidebar .zc-prototype-entry.active{background:#dfF1ff;border-color:#168df0!important;font-weight:600}
+.zc-sidebar .zc-prototype-entry:hover{background:#dbefff;box-shadow:0 0 0 2px #168df019}
+.zc-sidebar .zc-prototype-entry:focus-visible{outline:2px solid #168df0;outline-offset:2px}
+.zc-prototype-badge{flex:none;font-size:9px;line-height:18px;padding:0 4px;border-radius:3px;background:#168df0;color:#fff;font-weight:400}
 .zc-third-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
 .zc-third-title h2{font-size:19px;margin:0 0 6px;color:#25384b}
 .zc-third-title p,.zc-third-title>span,.zc-third-muted{color:#86929e;font-size:12px;margin:0}

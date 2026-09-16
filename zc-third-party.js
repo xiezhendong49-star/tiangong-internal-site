@@ -23,6 +23,16 @@ function zhaocaiAdminScreen() {
  if(tenant) {tenant.setAttribute('onclick',"zcGo('tenants')");if(third)tenant.classList.remove('active');}
  const aiNav=`<button class="${third?'on':''}" onclick="S.zcAiNavClosed=!S.zcAiNavClosed;render()">♧　AI绘画　${S.zcAiNavClosed?'⌄':'⌃'}</button>${S.zcAiNavClosed?'':`<button class="zc-side-sub" onclick="toast('原有 Transfusion 创作记录未接入此演示')">创作记录</button><button class="zc-side-sub ${third?'active':''}" onclick="zcGo('thirdParty')">第三方创作记录</button>`}`;
  sidebar.insertAdjacentHTML('beforeend',aiNav);
+ sidebar.insertAdjacentHTML('afterbegin','<div class="zc-prototype-guide"><b>原型说明</b><span>已开放 2 个入口，带“可查看”标记的菜单可点击。</span></div>');
+ sidebar.querySelectorAll('.zc-side-sub').forEach(entry=>{
+  if(!['兆材云系统租户列表','第三方创作记录'].includes(entry.textContent.trim()))return;
+  entry.classList.add('zc-prototype-entry');
+  entry.insertAdjacentHTML('beforeend','<span class="zc-prototype-badge" aria-hidden="true">可查看</span>');
+  if(entry.tagName!=='BUTTON'){
+   entry.setAttribute('role','button');entry.setAttribute('tabindex','0');
+   entry.setAttribute('onkeydown',"if(event.key==='Enter'||event.key===' '){event.preventDefault();zcGo('tenants')}");
+  }
+ });
  if(third) {
   sidebar.querySelectorAll('button.on').forEach(b=>{if(!b.textContent.includes('AI绘画'))b.classList.remove('on');});
   template.content.querySelector('.zc-main').innerHTML=zcThirdPartyContent();
