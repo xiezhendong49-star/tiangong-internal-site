@@ -28,7 +28,7 @@ function zhaocaiAdminScreen() {
   template.content.querySelector('.zc-main').innerHTML=zcThirdPartyContent();
   if(S.v3CallDetail) {
    const log=S.v3CallDetail;
-   const detail=document.createElement('template');detail.innerHTML=v3CallDetailDialog().replaceAll('创作时间','提交时间').replaceAll('生成时间','完成时间').replaceAll('未生成','—');
+   const detail=document.createElement('template');detail.innerHTML=v3CallDetailDialog().replaceAll('未生成','—');
    detail.content.querySelector('.v3-dialog-body').insertAdjacentHTML('afterbegin',`<div class="zc-third-detail-meta"><span>所属机构：<b>天工云仓</b></span><span>消耗额度：<b>${zcConsumedQuota(log)}</b></span></div>`);
    template.content.appendChild(detail.content);
   }

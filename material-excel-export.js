@@ -44,7 +44,7 @@ async function downloadMaterialExcel(records) {
   const sheet = workbook.addWorksheet('材质替换用料明细', {
     views: [{state: 'frozen', xSplit: 4, ySplit: 2, showGridLines: false}],
   });
-  const headers = ['记录编号','操作人','创作时间','状态','标点编号','平台编号','物料名称','物料分类','供应商名称','物料来源','物料图片','带标点原图','结果图'];
+  const headers = ['记录编号','操作人','提交时间','状态','标点编号','平台编号','物料名称','物料分类','供应商名称','物料来源','物料图片','带标点原图','结果图'];
   const widths = [26,17,23,10,12,22,23,13,27,22,15,40,40];
   sheet.columns = widths.map(width => ({width}));
   const details = records.flatMap(log => (log.points || []).map((point,i) => ({log,point,i})));
