@@ -13,20 +13,21 @@ function v3CameraFieldMarkup(camera) {
  const id='camera-field-'+(++v3CameraFieldSequence);
  return '<svg class="v3-camera-field" data-view="'+camera.id+'" aria-hidden="true"><defs><clipPath id="'+id+'"><path class="v3-camera-field-clip" clip-rule="evenodd"/></clipPath></defs><path class="v3-camera-field-sector" clip-path="url(#'+id+')"/></svg>';
 }
-function v3LayoutCameraField(svg,w,h,camera) {
+function v3LayoutCameraField(svg,w,h,camera,scale=1) {
  const pad=200;
  svg.style.left=-pad+'px';svg.style.top=-pad+'px';svg.style.width=(w+pad*2)+'px';svg.style.height=(h+pad*2)+'px';
  svg.setAttribute('viewBox',`${-pad} ${-pad} ${w+pad*2} ${h+pad*2}`);
  // Exclude the entire selection, including its border, from the field of view.
  svg.querySelector('.v3-camera-field-clip').setAttribute('d',`M ${-pad} ${-pad} H ${w+pad} V ${h+pad} H ${-pad} Z M -3 -3 V ${h+3} H ${w+3} V -3 Z`);
- const x=w*camera.x/100+camera.dx*36,y=h*camera.y/100+camera.dy*36;
- const angle=Math.atan2(h/2-y,w/2-x),half=Math.PI*0.24,radius=155;
+ const x=w*camera.x/100+camera.dx*36*scale,y=h*camera.y/100+camera.dy*36*scale;
+ const angle=Math.atan2(h/2-y,w/2-x),half=Math.PI*0.24,radius=155*scale;
  const p=a=>`${x+radius*Math.cos(a)} ${y+radius*Math.sin(a)}`;
  svg.querySelector('.v3-camera-field-sector').setAttribute('d',`M ${x} ${y} L ${p(angle-half)} A ${radius} ${radius} 0 0 1 ${p(angle+half)} Z`);
 }
 function v3CameraOverlay(box, editable) {
  const selected=V3_CAMERAS.find(c=>c.id===box.view);
- const arrow=selected ? (editable ? v3CameraFieldMarkup(selected) : '<svg class="v3-view-arrow" data-view="'+selected.id+'" viewBox="0 0 100 100" aria-hidden="true"><path d="'+v3ViewArrowPath(100,100,selected)+'"/></svg>') : '';
+ const arrow=selected ? v3CameraFieldMarkup(selected) : '';
+ if(!editable) return arrow+(selected ? `<span class="v3-camera v3-camera-static selected" role="img" aria-label="${selected.label}"><svg viewBox="0 0 24 24" style="transform:rotate(${selected.angle}deg)" aria-hidden="true"><rect x="3" y="7" width="11" height="10" rx="2"/><path d="m14 10 6-4v12l-6-4z"/></svg></span>` : '');
  return arrow+(editable ? V3_CAMERAS.map(c=>'<button type="button" class="v3-camera '+(box.view===c.id?'selected':'')+'" style="left:calc('+c.x+'% + '+c.dx*36+'px);top:calc('+c.y+'% + '+c.dy*36+'px)" aria-label="'+c.label+'" title="'+c.label+'" aria-pressed="'+(box.view===c.id)+'" onpointerdown="event.stopPropagation()" ontouchstart="event.stopPropagation()" ontouchmove="event.stopPropagation()" ontouchend="event.stopPropagation()" onclick="v3ChooseCamera(event,&quot;'+c.id+'&quot;)"><svg viewBox="0 0 24 24" style="transform:rotate('+c.angle+'deg)" aria-hidden="true"><rect x="3" y="7" width="11" height="10" rx="2"/><path d="m14 10 6-4v12l-6-4z"/></svg></button>').join('') : '');
 }
 function v3ChooseCamera(event,id) {
@@ -1495,7 +1496,13 @@ function v3PositionFloorBox(canvas, element, box, zoom = 1) {
   element.dataset.floorH = box.h;
   const arrow=element.querySelector && element.querySelector('.v3-view-arrow');
   const field=element.querySelector && element.querySelector('.v3-camera-field');
-  if(field) v3LayoutCameraField(field,element.clientWidth,element.clientHeight,V3_CAMERAS.find(c=>c.id===field.dataset.view));
+  if(field) {
+    const camera=V3_CAMERAS.find(c=>c.id===field.dataset.view),w=element.clientWidth,h=element.clientHeight;
+    const icon=element.querySelector('.v3-camera-static');
+    const scale=icon?Math.max(.35,Math.min(1,Math.min(w,h)/150)):1;
+    v3LayoutCameraField(field,w,h,camera,scale);
+    if(icon) Object.assign(icon.style,{left:(w*camera.x/100+camera.dx*36*scale)+'px',top:(h*camera.y/100+camera.dy*36*scale)+'px',transform:`translate(-50%,-50%) scale(${scale})`});
+  }
   if(arrow) {
     const w=box.w/100*frame.width,h=box.h/100*frame.height;
     arrow.setAttribute('viewBox',`0 0 ${w} ${h}`);
