@@ -495,6 +495,27 @@
 .zc-sidebar>button.on{color:#168df0;font-weight:700}
 .zc-side-sub{height:39px;display:flex;align-items:center;padding-left:48px;color:#465463;cursor:pointer}
 .zc-side-sub.active{background:#e8f5ff;color:#168df0;border-right:2px solid #168df0}
+.zc-sidebar>button.zc-side-sub{padding-left:48px;height:39px}
+.zc-third-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.zc-third-title h2{font-size:19px;margin:0 0 6px;color:#25384b}
+.zc-third-title p,.zc-third-title>span,.zc-third-muted{color:#86929e;font-size:12px;margin:0}
+.zc-third-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 18px}
+.zc-third-filters label{display:flex;flex-direction:column;gap:7px;color:#526171;min-width:0}
+.zc-third-filters input,.zc-third-filters select{height:34px;min-width:0;width:100%;border:1px solid #d5dbe1;border-radius:4px;background:#fff;padding:0 9px;color:#344455;font:inherit}
+.zc-third-filter-actions{display:flex;align-items:end;gap:8px}
+.zc-third-filter-actions .v3-btn{height:34px;border-radius:4px}
+.zc-third-party .zc-toolbar{align-items:center;flex:none;margin:18px 0 12px}
+.zc-toolbar button:disabled{opacity:.45;cursor:not-allowed}
+.zc-third-total{margin-left:auto;color:#778797}
+.zc-third-table{flex:1;min-height:0}
+.zc-third-table table{min-width:1080px!important;width:100%}
+.zc-third-table th{position:sticky;top:0;z-index:1;background:#f6f8fa}
+.zc-third-table td{height:78px!important;white-space:normal!important}
+.zc-third-table td small{display:block;color:#7c8c9b;margin-top:7px}
+.zc-third-table td img{width:76px;height:52px;object-fit:cover;border-radius:4px;display:block}
+.zc-third-table .zc-row-actions{min-width:75px}
+.zc-third-empty{text-align:center;color:#84919d}
+.zc-third-detail-meta{display:flex;flex-wrap:wrap;gap:18px;padding:12px 14px;background:#eef6fc;color:#627385;margin-bottom:16px;border-radius:6px}
 .zc-main{grid-column:2;grid-row:2;min-width:0;min-height:0;display:flex;flex-direction:column}
 .zc-main-tabs{height:52px;flex:none;display:flex;align-items:stretch;overflow:hidden;background:#fff;border-bottom:1px solid #dfe3e7;padding-left:14px}
 .zc-main-tabs button{flex:none;padding:0 20px;border:0;border-bottom:2px solid transparent;background:#fff;color:#384655;white-space:nowrap}
