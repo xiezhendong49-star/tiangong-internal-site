@@ -722,7 +722,6 @@ function materialPrepareScreen() {
 function materialSourceMenu() {
   return `<div class="v3-source-menu">
     <button onclick="openMaterialSource('tiangong')">天工云仓物料库</button>
-    <button onclick="openMaterialSource('rfid')">RFID识别</button>
     <button onclick="openMaterialSource('local')">本地上传</button>
   </div>`;
 }
@@ -1764,7 +1763,7 @@ function markerScreen() {
   const body = `<div class="v3-marker-layout merged">
     <div class="v3-marker-canvas" id="v3MarkerCanvas" onclick="addV3Mark(event)"><span class="v3-marker-guide">${guideText}</span><img src="${S.inputImage}" alt="${v3Esc(S.inputName || '效果图')}">${points}</div>
     <aside class="v3-marker-side">
-      <div class="v3-marker-side-top"><div><h2>物料</h2><small>${S.materialCandidates.length} 个物料　${S.marks.length}/3 个标点</small></div>${hasMaterials ? `<div class="v3-add-wrap"><button class="v3-btn" onclick="toggleMaterialMenu()">＋ 添加</button>${S.materialMenuOpen ? materialSourceMenu() : ''}</div>` : ''}</div>
+      <div class="v3-marker-side-top"><div class="v3-material-heading"><div class="v3-material-title-line"><h2>物料</h2><span class="v3-rfid-hint">RFID 自动识别中</span></div><small>${S.materialCandidates.length} 个物料　${S.marks.length}/3 个标点</small></div>${hasMaterials ? `<div class="v3-add-wrap"><button class="v3-btn" onclick="toggleMaterialMenu()">＋ 添加</button>${S.materialMenuOpen ? materialSourceMenu() : ''}</div>` : ''}</div>
       <div class="v3-marker-materials">${cards}</div>
       <button class="v3-btn primary v3-marker-submit" ${S.marks.length ? '' : 'disabled'} onclick="replaceMaterial()">生成替换效果</button>
     </aside>

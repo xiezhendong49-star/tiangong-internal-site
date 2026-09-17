@@ -643,3 +643,8 @@
 .v3-call-empty{text-align:center!important;padding:70px!important;color:#94a3b8}
 .v3-export-dialog{width:min(960px,94vw)!important}.v3-export-note{padding:12px 16px;margin-bottom:16px;border-radius:6px;background:#f0f8fc;color:#447286;font-size:13px}
 .v3-point-material-list article span{min-width:0}.v3-point-material-list article small{overflow-wrap:anywhere}
+
+/* RFID status stays on the existing material title row. */
+.v3-material-heading{flex:1}
+.v3-material-title-line{display:flex;align-items:center;justify-content:space-between;gap:10px;white-space:nowrap}
+.v3-rfid-hint{font-size:12px;font-weight:400;line-height:1.4;color:#637583;white-space:nowrap}
