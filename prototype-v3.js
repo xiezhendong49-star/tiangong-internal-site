@@ -186,7 +186,7 @@ const V3_EFFECT_HISTORY_SEED = [
   { id: 'history-1', name: '澜庭四居 · 奶油风', image: V3_STYLE_SCENE_IMAGES[4], time: '2026-08-30 11:06', operator: '高志远' },
 ];
 const V3_EFFECT_HISTORY_IMAGE_UPGRADE = Object.fromEntries(V3_EFFECT_HISTORY_SEED.map(item => [item.id, item.image]));
-const V3_HISTORY_STORAGE_KEY = 'tiangong-v3-effect-history';
+const V3_HISTORY_STORAGE_KEY = 'tiangong-v4-case-demo-effect-history';
 const V3_EFFECT_HISTORY = (() => {
   if (typeof localStorage === 'undefined') return [...V3_EFFECT_HISTORY_SEED];
   try {
