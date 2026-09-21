@@ -118,7 +118,7 @@ const v5RequiredImageDialog=v3AdminItemDialog;
 v3AdminItemDialog=function(){
  const html=v5RequiredImageDialog();if(!['floor','effect'].includes(S.adminSection))return html;
  const t=document.createElement('template');t.innerHTML=html;
- for(const name of ['业态','空间','图片名称','图片排序']){const input=t.content.querySelector('[aria-label="'+name+'"]');if(!input)continue;input.setAttribute('aria-required','true');const label=input.closest('label');label.insertBefore(Object.assign(document.createElement('em'),{className:'v5-required',textContent:' * '}),input);}
+ for(const name of ['业态','空间','图片名称','图片排序']){const input=t.content.querySelector('[aria-label="'+name+'"]');if(!input)continue;input.setAttribute('aria-required','true');const label=input.closest('label');const caption=document.createElement('span');caption.className='v5-field-caption';while(label.firstChild&&label.firstChild!==input)caption.append(label.firstChild);caption.append(Object.assign(document.createElement('em'),{className:'v5-required',textContent:' *'}));label.insertBefore(caption,input);}
  const upload=t.content.querySelector('.v3-admin-upload');upload.insertAdjacentHTML('afterbegin','<span class="v5-upload-label">图片 <em class="v5-required">*</em></span>');upload.querySelector('input').setAttribute('aria-required','true');
  return t.innerHTML;
 };
