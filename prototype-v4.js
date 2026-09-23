@@ -32,7 +32,7 @@ function v4CategoryBar(kind,context){
 function v4ChooseCategory(kind,context,level,id){const f=v4Filter(context,kind);f[level]=id;if(level==='primary')f.secondary='';if(context==='effect')S.effectSelection=null;if(context==='floor'&&S.floorDraftIndex!==-1){const index=V3_FLOORS.findIndex(x=>v4Matches(x,'floor','floor'));if(index>=0){pickV3Floor(index);return;}S.floorDraftIndex=-2;S.floorDraftBox=null;S.floorDraftImage='';S.floorDraftName='';}render();}
 function v4Empty(){return '<div class="v4-empty">该分类暂无图片</div>';}
 const v4OriginalSource=source;
-source=function(){return v4OriginalSource().replace('v3-entry-grid-compact','v3-entry-grid-compact v4-entry-grid').replace('<button class="v3-entry-card',`<button class="v4-case-entry" onclick="v4OpenCases()"><img src="${(V3_EFFECT_PRESETS[0]?.image||V3_USER_ASSETS.effectBefore)}" alt=""><span class="v4-case-entry-copy"><small>空间灵感</small><h2>看案例</h2><p>浏览空间案例，发现搭配灵感</p></span><span class="v3-entry-arrow">→</span></button><button class="v3-entry-card`);};
+source=function(){return v4OriginalSource().replace('v3-entry-grid-compact','v3-entry-grid-compact v4-entry-grid').replace('<button class="v3-entry-card',`<button class="v4-case-entry" onclick="v4OpenCases()"><img src="${(V3_EFFECT_PRESETS[0]?.image||V3_USER_ASSETS.effectBefore)}" alt=""><span class="v4-case-entry-copy"><small>空间灵感</small><h2>项目案例库</h2><p>浏览空间案例，发现搭配灵感</p></span><span class="v3-entry-arrow">→</span></button><button class="v3-entry-card`);};
 const v4OriginalOpenPicker=openGeneratePicker;
 openGeneratePicker=function(kind){if(kind==='floor'){v4ResetFilter('floor','floor');if(!V3_FLOORS.length){S.flowModal='floor';S.floorDraftIndex=-2;S.floorDraftBox=null;S.floorDraftImage='';S.floorDraftName='';render();return;}}v4OriginalOpenPicker(kind);};
 const v4OriginalStartRoute=startRoute;
@@ -60,7 +60,7 @@ effectSelectScreen=function(){
 function v4OpenCases(){v4ResetFilter('cases','effect');S.page='cases';render();}
 function v4CaseScreen(){
  const cards=V3_EFFECT_PRESETS.map((item,index)=>({item,index})).filter(({item})=>v4Matches(item,'cases','effect')).map(({item,index})=>`<button class="v3-effect-card v4-case-card" onclick="S.v4CaseIndex=${index};S.page='caseDetail';render()"><img src="${item.image}" alt="${v3Esc(item.name)}"><b>${v3Esc(item.name)}</b><small>${v3Esc(v4CategoryLabel('effect',item))}</small></button>`).join('');
- return v3Shell('看案例',`<section class="v4-case-library">${v4CategoryBar('effect','cases')}<div class="v4-case-grid">${cards||v4Empty()}</div></section>`,'source');
+ return v3Shell('项目案例库',`<section class="v4-case-library">${v4CategoryBar('effect','cases')}<div class="v4-case-grid">${cards||v4Empty()}</div></section>`,'source');
 }
 function v4CategoryLabel(kind,item){const p=V4_CATEGORIES[kind].find(x=>x.id===item.primary);return p?`${p.name} / ${p.children.find(x=>x.id===item.secondary)?.name||'未分类'}`:'未分类';}
 function v4CaseDetail(){const item=V3_EFFECT_PRESETS[S.v4CaseIndex];if(!item)return v4CaseScreen();return v3Shell(item.name,`<div class="v4-case-detail"><img src="${item.image}" alt="${v3Esc(item.name)}"><div><span>${v3Esc(v4CategoryLabel('effect',item))}</span></div></div>`,'cases');}
