@@ -14,10 +14,10 @@ const V4_CATEGORIES = {
   ]
 };
 V3_FLOORS.forEach((item,i)=>Object.assign(item,{primary:'f-home',secondary:i===0?'f-chun':'f-one'}));
-V3_EFFECT_PRESETS.forEach((item,i)=>Object.assign(item,{primary:'e-home',secondary:['e-bedroom','e-dining','e-bedroom','e-living','e-dining'][i]}));
+V6_CASE_PRESETS.forEach((item,i)=>Object.assign(item,{primary:'e-home',secondary:['e-bedroom','e-dining','e-bedroom','e-living','e-dining'][i]}));
 // Use the complete library in both the admin and iPad interfaces.
 for(const kind of ['floor','effect']) {
- const items=kind==='floor'?V3_FLOORS:V3_EFFECT_PRESETS;
+ const items=kind==='floor'?V3_FLOORS:V6_CASE_PRESETS;
  V3_ADMIN_ITEMS[kind]=items.map((item,i)=>({...item,sort:i+1,status:'启用',operator:'高志远',updatedAt:v3Now()}));
 }
 S.v4Filters={};
@@ -32,7 +32,7 @@ function v4CategoryBar(kind,context){
 function v4ChooseCategory(kind,context,level,id){const f=v4Filter(context,kind);f[level]=id;if(level==='primary')f.secondary='';if(context==='effect')S.effectSelection=null;if(context==='floor'&&S.floorDraftIndex!==-1){const index=V3_FLOORS.findIndex(x=>v4Matches(x,'floor','floor'));if(index>=0){pickV3Floor(index);return;}S.floorDraftIndex=-2;S.floorDraftBox=null;S.floorDraftImage='';S.floorDraftName='';}render();}
 function v4Empty(){return '<div class="v4-empty">该分类暂无图片</div>';}
 const v4OriginalSource=source;
-source=function(){return v4OriginalSource().replace('v3-entry-grid-compact','v3-entry-grid-compact v4-entry-grid').replace('<button class="v3-entry-card',`<button class="v4-case-entry" onclick="v4OpenCases()"><img src="${(V3_EFFECT_PRESETS[0]?.image||V3_USER_ASSETS.effectBefore)}" alt=""><span class="v4-case-entry-copy"><small>空间灵感</small><h2>项目案例库</h2><p>浏览空间案例，发现搭配灵感</p></span><span class="v3-entry-arrow">→</span></button><button class="v3-entry-card`);};
+source=function(){return v4OriginalSource().replace('v3-entry-grid-compact','v3-entry-grid-compact v4-entry-grid').replace('<button class="v3-entry-card',`<button class="v4-case-entry" onclick="v4OpenCases()"><img src="${(V6_CASE_PRESETS[0]?.image||V3_USER_ASSETS.effectBefore)}" alt=""><span class="v4-case-entry-copy"><small>空间灵感</small><h2>项目案例库</h2><p>浏览空间案例，发现搭配灵感</p></span><span class="v3-entry-arrow">→</span></button><button class="v3-entry-card`);};
 const v4OriginalOpenPicker=openGeneratePicker;
 openGeneratePicker=function(kind){if(kind==='floor'){v4ResetFilter('floor','floor');if(!V3_FLOORS.length){S.flowModal='floor';S.floorDraftIndex=-2;S.floorDraftBox=null;S.floorDraftImage='';S.floorDraftName='';render();return;}}v4OriginalOpenPicker(kind);};
 const v4OriginalStartRoute=startRoute;
@@ -53,17 +53,17 @@ const v4OriginalEffectScreen=effectSelectScreen;
 effectSelectScreen=function(){
  const template=document.createElement('template');template.innerHTML=v4OriginalEffectScreen();
  const section=template.content.querySelector('.v3-effect-section');section.insertAdjacentHTML('afterbegin',v4CategoryBar('effect','effect'));
- section.querySelectorAll('button[onclick^="selectV3Effect"]').forEach(button=>{const index=Number(button.getAttribute('onclick').match(/,(\d+)/)[1]);if(!v4Matches(V3_EFFECT_PRESETS[index],'effect','effect'))button.remove();});
- if(!V3_EFFECT_PRESETS.some(x=>v4Matches(x,'effect','effect')))section.querySelector('.v3-effect-grid').insertAdjacentHTML('beforeend',v4Empty());
+ section.querySelectorAll('button[onclick^="selectV3Effect"]').forEach(button=>{const index=Number(button.getAttribute('onclick').match(/,(\d+)/)[1]);if(!v4Matches(V6_CASE_PRESETS[index],'effect','effect'))button.remove();});
+ if(!V6_CASE_PRESETS.some(x=>v4Matches(x,'effect','effect')))section.querySelector('.v3-effect-grid').insertAdjacentHTML('beforeend',v4Empty());
  return template.innerHTML;
 };
 function v4OpenCases(){v4ResetFilter('cases','effect');S.page='cases';render();}
 function v4CaseScreen(){
- const cards=V3_EFFECT_PRESETS.map((item,index)=>({item,index})).filter(({item})=>v4Matches(item,'cases','effect')).map(({item,index})=>`<button class="v3-effect-card v4-case-card" onclick="S.v4CaseIndex=${index};S.page='caseDetail';render()"><img src="${item.image}" alt="${v3Esc(item.name)}"><b>${v3Esc(item.name)}</b><small>${v3Esc(v4CategoryLabel('effect',item))}</small></button>`).join('');
+ const cards=V6_CASE_PRESETS.map((item,index)=>({item,index})).filter(({item})=>v4Matches(item,'cases','effect')).map(({item,index})=>`<button class="v3-effect-card v4-case-card" onclick="S.v4CaseIndex=${index};S.page='caseDetail';render()"><img src="${item.image}" alt="${v3Esc(item.name)}"><b>${v3Esc(item.name)}</b><small>${v3Esc(v4CategoryLabel('effect',item))}</small></button>`).join('');
  return v3Shell('项目案例库',`<section class="v4-case-library">${v4CategoryBar('effect','cases')}<div class="v4-case-grid">${cards||v4Empty()}</div></section>`,'source');
 }
 function v4CategoryLabel(kind,item){const p=V4_CATEGORIES[kind].find(x=>x.id===item.primary);return p?`${p.name} / ${p.children.find(x=>x.id===item.secondary)?.name||'未分类'}`:'未分类';}
-function v4CaseDetail(){const item=V3_EFFECT_PRESETS[S.v4CaseIndex];if(!item)return v4CaseScreen();return v3Shell(item.name,`<div class="v4-case-detail"><img src="${item.image}" alt="${v3Esc(item.name)}"><div><span>${v3Esc(v4CategoryLabel('effect',item))}</span></div></div>`,'cases');}
+function v4CaseDetail(){const item=V6_CASE_PRESETS[S.v4CaseIndex];if(!item)return v4CaseScreen();return v3Shell(item.name,`<div class="v4-case-detail"><img src="${item.image}" alt="${v3Esc(item.name)}"><div><span>${v3Esc(v4CategoryLabel('effect',item))}</span></div></div>`,'cases');}
 // Category configuration is independently scoped to the current image library.
 const v4OriginalAdmin=admin;
 admin=function(){
@@ -88,7 +88,7 @@ const v4OriginalAdminDialog=v3AdminItemDialog;
 v3AdminItemDialog=function(){let html=v4OriginalAdminDialog();const kind=S.adminSection;if(!V4_CATEGORIES[kind])return html;const form=S.v3AdminForm;form.primary ||= V4_CATEGORIES[kind][0]?.id;const parent=V4_CATEGORIES[kind].find(x=>x.id===form.primary);if(!parent?.children.some(c=>c.id===form.secondary))form.secondary=parent?.children[0]?.id||'';
  const fields=`<label>一级分类<select aria-label="图片一级分类" onchange="S.v3AdminForm.primary=this.value;S.v3AdminForm.secondary='';render()">${V4_CATEGORIES[kind].map(p=>`<option value="${p.id}" ${p.id===form.primary?'selected':''}>${v3Esc(p.name)}</option>`).join('')}</select></label><label>二级分类<select aria-label="图片二级分类" onchange="S.v3AdminForm.secondary=this.value">${(parent?.children||[]).map(c=>`<option value="${c.id}" ${c.id===form.secondary?'selected':''}>${v3Esc(c.name)}</option>`).join('')||'<option value="">请先建立二级分类</option>'}</select></label>`;
  return html.replace('<label class="v3-admin-upload">',fields+'<label class="v3-admin-upload">');};
-function v4SyncLibrary(kind){if(!V4_CATEGORIES[kind])return;const target=kind==='floor'?V3_FLOORS:V3_EFFECT_PRESETS;target.splice(0,target.length,...V3_ADMIN_ITEMS[kind].filter(x=>x.status==='启用').slice().sort((a,b)=>a.sort-b.sort));}
+function v4SyncLibrary(kind){if(!V4_CATEGORIES[kind])return;const target=kind==='floor'?V3_FLOORS:V6_CASE_PRESETS;target.splice(0,target.length,...V3_ADMIN_ITEMS[kind].filter(x=>x.status==='启用').slice().sort((a,b)=>a.sort-b.sort));}
 const v4OriginalSaveAdmin=saveV3AdminItem;
 saveV3AdminItem=function(){const kind=S.adminSection;if(!V4_CATEGORIES[kind])return v4OriginalSaveAdmin();const form=S.v3AdminForm,sort=Number(form.sort);if(!form.name.trim()||!form.image||!Number.isInteger(sort)||sort<1||!form.secondary){toast('请填写名称、图片、分类和有效排序');return;}const item={...form,name:form.name.trim(),sort,status:form.status||'启用',operator:'高志远',updatedAt:v3Now()};delete item.editIndex;if(Number.isInteger(form.editIndex))V3_ADMIN_ITEMS[kind][form.editIndex]=item;else V3_ADMIN_ITEMS[kind].push(item);v4SyncLibrary(kind);S.v3AdminModal=null;render();};
 const v4OriginalToggleAdmin=toggleAdminStatus;
