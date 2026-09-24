@@ -1,14 +1,12 @@
 /* September 23 review. Session-only interactive prototype; no backend writes. */
-const V6_USER={id:'user-gao',name:'高志远',role:'admin'};
+const V6_USER={id:'user-gao',name:'高志远'};
 S.v6Mode='ipad';
-const V6_SPACES=Array.from(new Map(V4_CATEGORIES.effect.flatMap(category=>category.children).map(space=>[space.id,{...space}])).values());
 // Existing category IDs are retained so historical associations remain readable.
 for(const kind of ['floor','effect']) {
  V4_CATEGORIES[kind].splice(2);
  V4_CATEGORIES[kind][0].name='好房子';
  V4_CATEGORIES[kind][1].name='超高层';
 }
-V4_CATEGORIES.effect.forEach(category=>category.children=V6_SPACES);
 V5_PROJECTS.find(p=>p.id==='project-two').business='hotel';
 V3_ADMIN_ITEMS.floor=V3_ADMIN_ITEMS.floor.filter(x=>!x.demo);
 V3_ADMIN_ITEMS.effect=V3_ADMIN_ITEMS.effect.filter(x=>x.primary==='e-home');
@@ -41,7 +39,7 @@ const v6SwitchAdmin=switchAdmin;
 switchAdmin=function(section){S.v6ChooseType=false;if(section==='floor'||section==='render')S.v6TypeFilter='';v6SwitchAdmin(section);};
 function v6ResourceAction(kind,index,action){S.adminSection=kind;({edit:openAdminEdit,toggle:toggleAdminStatus,delete:deleteV3AdminItem})[action](index);}
 const v6OldAdmin=admin;
-admin=function(){if(['floor','render'].includes(S.adminSection))return v6SpaceScreen();const html=v6OldAdmin();if(S.adminSection!=='effect')return html;const t=document.createElement('template');t.innerHTML=html;const filters=t.content.querySelector('.v5-admin-image-filters'),product=filters?.querySelector('[aria-label="筛选产品线"]')?.closest('label');if(product)filters.prepend(product);t.content.querySelectorAll('.v3-table tr').forEach(row=>{const cells=row.children;if(cells.length===11)row.insertBefore(cells[4],cells[3]);});return t.innerHTML;};
+admin=function(){if(['floor','render'].includes(S.adminSection))return v6SpaceScreen();const html=v6OldAdmin();if(S.adminSection!=='effect')return html;const t=document.createElement('template');t.innerHTML=html;const filters=t.content.querySelector('.v5-admin-image-filters'),product=filters?.querySelector('[aria-label="筛选产品线"]')?.closest('label');if(product)filters.prepend(product);t.content.querySelectorAll('.v3-table tr').forEach(row=>{const cells=row.children;if(cells.length===10)row.insertBefore(cells[4],cells[3]);});return t.innerHTML;};
 function v6SpaceScreen(){
  const rows=['floor','render'].flatMap(kind=>V3_ADMIN_ITEMS[kind].map((item,index)=>({item,index,kind}))).filter(({item,kind})=>(!S.v6TypeFilter||kind===S.v6TypeFilter)&&(!S.adminQuery||item.name.includes(S.adminQuery))&&(S.adminStatus==='all'||S.adminStatus===item.status)).sort((a,b)=>a.item.sort-b.item.sort);
  const content=`<section class="v3-admin-card"><div class="v3-admin-title"><div><h1>空间选材配置</h1><p>管理户型图与效果图</p></div><button class="v3-btn primary" onclick="openAdminModal()">＋ 新增</button></div><div class="v3-admin-filters"><label class="v6-filter-label">类型<select aria-label="筛选类型" onchange="S.v6TypeFilter=this.value;render()"><option value="">全部类型</option><option value="floor" ${S.v6TypeFilter==='floor'?'selected':''}>户型图</option><option value="render" ${S.v6TypeFilter==='render'?'selected':''}>效果图</option></select></label><input aria-label="搜索图片名称" placeholder="搜索名称" value="${v3Esc(S.adminQuery||'')}" oninput="S.adminQuery=this.value" onkeydown="if(event.key==='Enter')render()"><select aria-label="图片状态" onchange="S.adminStatus=this.value;render()"><option value="all">全部状态</option>${['启用','停用'].map(s=>`<option ${S.adminStatus===s?'selected':''}>${s}</option>`).join('')}</select><button class="v3-btn" onclick="render()">查询</button><button class="v3-btn" onclick="S.adminQuery='';S.adminStatus='all';S.v6TypeFilter='';render()">重置</button></div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>序号</th><th>图片</th><th>名称</th><th>类型</th><th>排序</th><th>状态</th><th>操作人</th><th>操作时间</th><th>操作</th></tr></thead><tbody>${rows.map(({item,index,kind},i)=>`<tr><td>${i+1}</td><td><img class="v3-table-thumb" src="${v3Esc(item.image)}" alt="${v3Esc(item.name)}"></td><td><b>${v3Esc(item.name)}</b></td><td>${kind==='floor'?'户型图':'效果图'}</td><td>${item.sort}</td><td><span class="v3-status ${item.status==='停用'?'fail':''}">${item.status}</span></td><td>${v3Esc(item.operator)}</td><td>${v3Esc(item.updatedAt)}</td><td><div class="v3-admin-actions"><button onclick="v6ResourceAction('${kind}',${index},'edit')">编辑</button><button onclick="v6ResourceAction('${kind}',${index},'toggle')">${item.status==='启用'?'停用':'启用'}</button><button class="v3-delete-action" onclick="v6ResourceAction('${kind}',${index},'delete')">删除</button></div></td></tr>`).join('')||'<tr><td colspan="9">暂无符合条件的图片</td></tr>'}</tbody></table></div></section>`;
@@ -75,14 +73,10 @@ v5ToggleProject=function(id){const p=v5Project(id);p.status=p.status==='启用'?
 v5DeleteProject=function(id){if(V3_ADMIN_ITEMS.effect.some(x=>x.projectId===id)){toast('该项目已关联案例，请先移出案例再删除');return;}const i=V5_PROJECTS.findIndex(x=>x.id===id);if(i>=0)V5_PROJECTS.splice(i,1);render();};
 const v6SaveProject=v5SaveProject;
 v5SaveProject=function(){const preserved=V3_ADMIN_ITEMS.floor.map(x=>({primary:x.primary,secondary:x.secondary,projectId:x.projectId}));v6SaveProject();V3_ADMIN_ITEMS.floor.forEach((x,i)=>Object.assign(x,preserved[i]));};
-// Session identity selector lives in the prototype toolbar, outside product UI.
-function v6CanRead(record){return !!record&&((S.v6Mode==='admin'&&V6_USER.role==='admin')||record.operator===V6_USER.name);}
-function v6Role(role){V6_USER.role=role;S.v3CallDetail=null;S.callSelected=[];S.effectSelection=null;render();}
-const roleControl=document.createElement('label');roleControl.className='v6-demo-role';roleControl.innerHTML='演示身份 <select aria-label="演示身份" onchange="v6Role(this.value)"><option value="admin">管理员 · 高志远</option><option value="user">普通用户 · 高志远</option></select>';
-document.getElementById('adminMode').parentElement.append(roleControl);
-roleControl.hidden=true;
+// Management sees all records; iPad retains the current user's creation history.
+function v6CanRead(record){return !!record&&(S.v6Mode==='admin'||record.operator===V6_USER.name);}
 const v6SetMode=setPrototypeMode;
-setPrototypeMode=function(mode){S.v6Mode=mode;roleControl.hidden=mode!=='admin';S.effectSelection=null;S.v3CallDetail=null;S.callSelected=[];v6SetMode(mode);};
+setPrototypeMode=function(mode){S.v6Mode=mode;S.effectSelection=null;S.v3CallDetail=null;S.callSelected=[];v6SetMode(mode);};
 
 const v6FilteredCalls=v3FilteredCalls;
 v3FilteredCalls=function(){return v6FilteredCalls().filter(v6CanRead);};
@@ -92,7 +86,7 @@ v3CallLogScreen=function(){
  const t=document.createElement('template');t.innerHTML=v6CallScreen();
  t.content.querySelectorAll('tbody tr').forEach((row,i)=>{const log=v3FilteredCalls()[i];if(!log)return;const actions=row.querySelector('.v3-admin-actions');actions.querySelector('.v3-export-unavailable')?.remove();if(!actions.querySelector('[onclick^="v3ExportCalls"]'))actions.insertAdjacentHTML('beforeend',`<button onclick="v3ExportCalls('${log.id}')">导出</button>`);});
  const selected=new Set(S.callSelected||[]);t.content.querySelector('.v3-call-toolbar>button').disabled=!v3FilteredCalls().some(x=>selected.has(x.id));t.content.querySelector('.v3-call-toolbar>small').textContent='按创作类型导出对应模板';
- t.content.querySelector('.v3-admin-title p').textContent=V6_USER.role==='admin'?'全部创作记录':'我的创作记录';return t.innerHTML;
+ t.content.querySelector('.v3-admin-title p').textContent=S.v6Mode==='admin'?'全部创作记录':'我的创作记录';return t.innerHTML;
 };
 // Unified download: each creation type has its own concise worksheet.
 v3ExportCalls=async function(id){
@@ -143,7 +137,7 @@ function v6OpenMaterial(id){const m=S.materialCandidates.find(x=>x.id===id);if(!
 const v6BackMaterial=v5BackToCaseMaterial;
 v5BackToCaseMaterial=function(){if(!S.v6DetailBack)return v6BackMaterial();S.v5CaseMaterial=null;S.page=S.v6DetailBack;S.v6DetailBack=null;render();};
 const v6Marker=markerScreen;
-markerScreen=function(){const t=document.createElement('template');t.innerHTML=v6Marker();t.content.querySelectorAll('.v3-marker-material').forEach((card,i)=>{const m=S.materialCandidates[i];card.querySelector('.v3-marker-material-copy').innerHTML=v6MaterialCopy(m);card.querySelector('.v3-marker-material-actions').insertAdjacentHTML('beforeend',`<button onclick="event.stopPropagation();v6OpenMaterial('${m.id}')">详情</button>`);});return t.innerHTML;};
+markerScreen=function(){const t=document.createElement('template');t.innerHTML=v6Marker();t.content.querySelectorAll('.v3-marker-material').forEach((card,i)=>{const m=S.materialCandidates[i];card.querySelector('.v3-marker-material-copy').innerHTML=v6MaterialCopy(m);});return t.innerHTML;};
 const v6Scene=v4Scene;
 v4Scene=function(image,points,mode){const t=document.createElement('template');t.innerHTML=v6Scene(image,points,mode);const m=points.find(x=>x.id===S.v4PointSelected)?.material,copy=t.content.querySelector('.v4-point-copy');if(mode==='case'&&m&&copy)copy.innerHTML=v6MaterialCopy(m);return t.innerHTML;};
 const v6MaterialDetail=materialDetail;
