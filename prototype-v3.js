@@ -341,8 +341,8 @@ Object.assign(S, {
   floorDraftIndex: 0,
   styleImage: '',
   styleName: '',
-  styleDraftImage: V3_STYLES[0].image,
-  styleDraftName: V3_STYLES[0].name,
+  styleDraftImage: (V3_STYLES[0]?.image || ''),
+  styleDraftName: (V3_STYLES[0]?.name || ''),
   styleDraftIndex: 0,
   effectSelection: null,
   replacementResult: '',
@@ -455,8 +455,8 @@ function openGeneratePicker(kind) {
     S.floorDraftIndex = Math.max(0, V3_FLOORS.findIndex(item => item.image === S.floorDraftImage));
     if (S.floorBox && S.floorViewport) { S.floorDraftZoom=S.floorViewport.zoom; S.floorFocus=S.floorViewport.focus; }
   } else {
-    S.styleDraftImage = S.styleImage || V3_STYLES[0].image;
-    S.styleDraftName = S.styleName || V3_STYLES[0].name;
+    S.styleDraftImage = S.styleImage || (V3_STYLES[0]?.image || '');
+    S.styleDraftName = S.styleName || (V3_STYLES[0]?.name || '');
     S.styleDraftIndex = Math.max(0, V3_STYLES.findIndex(item => item.image === S.styleDraftImage));
   }
   render();
@@ -1393,8 +1393,8 @@ function openGeneratePicker(kind) {
     S.floorDraftIndex = Math.max(0, V3_FLOORS.findIndex(item => item.image === S.floorDraftImage));
     if (S.floorBox && S.floorViewport) { S.floorDraftZoom=S.floorViewport.zoom; S.floorFocus=S.floorViewport.focus; }
   } else {
-    S.styleDraftImage = S.styleImage || V3_STYLES[0].image;
-    S.styleDraftName = S.styleImage ? S.styleName : V3_STYLES[0].name;
+    S.styleDraftImage = S.styleImage || (V3_STYLES[0]?.image || '');
+    S.styleDraftName = S.styleImage ? S.styleName : (V3_STYLES[0]?.name || '');
     S.styleDraftIndex = Math.max(0, V3_STYLES.findIndex(item => item.image === S.styleDraftImage));
   }
   render();

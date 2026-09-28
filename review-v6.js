@@ -14,11 +14,11 @@ for(const item of V3_ADMIN_ITEMS.effect){item.projectId||='project-one';v5ApplyP
 V3_ADMIN_ITEMS.render=V3_EFFECT_PRESETS.map((x,i)=>({name:x.name,image:x.image,sort:i+1,status:'启用',operator:'高志远',updatedAt:v3Now()}));
 S.v6TypeFilter='';
 v4SyncLibrary=function(kind){
- const target=kind==='floor'?V3_FLOORS:kind==='effect'?V6_CASE_PRESETS:kind==='render'?V3_EFFECT_PRESETS:null;
+ const target=kind==='floor'?V3_FLOORS:kind==='effect'?V6_CASE_PRESETS:kind==='render'?V3_EFFECT_PRESETS:kind==='style'?V3_STYLES:null;
  if(!target)return;
  target.splice(0,target.length,...V3_ADMIN_ITEMS[kind].filter(x=>x.status==='启用'&&(kind!=='effect'||v5ActiveProject(x.projectId))).slice().sort((a,b)=>a.sort-b.sort));
 };
-['floor','effect','render'].forEach(v4SyncLibrary);
+['floor','effect','render','style'].forEach(v4SyncLibrary);
 // No category or project filters on ordinary creation resources.
 generatePickerDialog=v4OriginalPicker;
 openGeneratePicker=v4OriginalOpenPicker;
@@ -34,35 +34,42 @@ effectSelectScreen=function(){
 };
 const v6SelectEffect=selectV3Effect;
 selectV3Effect=function(group,index){if(group==='history'&&!v6CanRead(V3_EFFECT_HISTORY[index]))return;v6SelectEffect(group,index);};
-v3AdminNav=function(){return `<aside class="v3-admin-nav"><img src="${IMG.logo}" alt="天工云仓"><h4>AI空间选材</h4>${[['projects','项目配置'],['floor','空间选材配置'],['style','风格参考图配置'],['effect','案例库配置'],['calls','创作记录']].map(([key,label])=>`<button class="${S.adminSection===key||(key==='floor'&&S.adminSection==='render')?'on':''}" onclick="switchAdmin('${key}')">${label}</button>`).join('')}</aside>`;};
+v3AdminNav=function(){return `<aside class="v3-admin-nav"><img src="${IMG.logo}" alt="天工云仓"><h4>AI空间选材</h4>${[['projects','项目配置'],['floor','空间选材配置'],['effect','案例库配置'],['calls','创作记录']].map(([key,label])=>`<button class="${S.adminSection===key||(key==='floor'&&['render','style'].includes(S.adminSection))?'on':''}" onclick="switchAdmin('${key}')">${label}</button>`).join('')}</aside>`;};
 const v6SwitchAdmin=switchAdmin;
-switchAdmin=function(section){S.v6ChooseType=false;if(section==='floor'||section==='render')S.v6TypeFilter='';v6SwitchAdmin(section);};
+switchAdmin=function(section){S.v6ChooseType=false;if(['floor','render','style'].includes(section))S.v6TypeFilter='';v6SwitchAdmin(section);};
 function v6ResourceAction(kind,index,action){S.adminSection=kind;({edit:openAdminEdit,toggle:toggleAdminStatus,delete:deleteV3AdminItem})[action](index);}
 const v6OldAdmin=admin;
-admin=function(){if(['floor','render'].includes(S.adminSection))return v6SpaceScreen();const html=v6OldAdmin();if(S.adminSection!=='effect')return html;const t=document.createElement('template');t.innerHTML=html;const filters=t.content.querySelector('.v5-admin-image-filters'),product=filters?.querySelector('[aria-label="筛选产品线"]')?.closest('label');if(product)filters.prepend(product);t.content.querySelectorAll('.v3-table tr').forEach(row=>{const cells=row.children;if(cells.length===10)row.insertBefore(cells[4],cells[3]);});return t.innerHTML;};
+admin=function(){if(['floor','render','style'].includes(S.adminSection))return v6SpaceScreen();const html=v6OldAdmin();if(S.adminSection!=='effect')return html;const t=document.createElement('template');t.innerHTML=html;const filters=t.content.querySelector('.v5-admin-image-filters'),product=filters?.querySelector('[aria-label="筛选产品线"]')?.closest('label');if(product)filters.prepend(product);t.content.querySelectorAll('.v3-table tr').forEach(row=>{const cells=row.children;if(cells.length===10)row.insertBefore(cells[4],cells[3]);});return t.innerHTML;};
 function v6SpaceScreen(){
- const rows=['floor','render'].flatMap(kind=>V3_ADMIN_ITEMS[kind].map((item,index)=>({item,index,kind}))).filter(({item,kind})=>(!S.v6TypeFilter||kind===S.v6TypeFilter)&&(!S.adminQuery||item.name.includes(S.adminQuery))&&(S.adminStatus==='all'||S.adminStatus===item.status)).sort((a,b)=>a.item.sort-b.item.sort);
- const content=`<section class="v3-admin-card"><div class="v3-admin-title"><div><h1>空间选材配置</h1><p>管理户型图与效果图</p></div><button class="v3-btn primary" onclick="openAdminModal()">＋ 新增</button></div><div class="v3-admin-filters"><label class="v6-filter-label">类型<select aria-label="筛选类型" onchange="S.v6TypeFilter=this.value;render()"><option value="">全部类型</option><option value="floor" ${S.v6TypeFilter==='floor'?'selected':''}>户型图</option><option value="render" ${S.v6TypeFilter==='render'?'selected':''}>效果图</option></select></label><input aria-label="搜索图片名称" placeholder="搜索名称" value="${v3Esc(S.adminQuery||'')}" oninput="S.adminQuery=this.value" onkeydown="if(event.key==='Enter')render()"><select aria-label="图片状态" onchange="S.adminStatus=this.value;render()"><option value="all">全部状态</option>${['启用','停用'].map(s=>`<option ${S.adminStatus===s?'selected':''}>${s}</option>`).join('')}</select><button class="v3-btn" onclick="render()">查询</button><button class="v3-btn" onclick="S.adminQuery='';S.adminStatus='all';S.v6TypeFilter='';render()">重置</button></div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>序号</th><th>图片</th><th>名称</th><th>类型</th><th>排序</th><th>状态</th><th>操作人</th><th>操作时间</th><th>操作</th></tr></thead><tbody>${rows.map(({item,index,kind},i)=>`<tr><td>${i+1}</td><td><img class="v3-table-thumb" src="${v3Esc(item.image)}" alt="${v3Esc(item.name)}"></td><td><b>${v3Esc(item.name)}</b></td><td>${kind==='floor'?'户型图':'效果图'}</td><td>${item.sort}</td><td><span class="v3-status ${item.status==='停用'?'fail':''}">${item.status}</span></td><td>${v3Esc(item.operator)}</td><td>${v3Esc(item.updatedAt)}</td><td><div class="v3-admin-actions"><button onclick="v6ResourceAction('${kind}',${index},'edit')">编辑</button><button onclick="v6ResourceAction('${kind}',${index},'toggle')">${item.status==='启用'?'停用':'启用'}</button><button class="v3-delete-action" onclick="v6ResourceAction('${kind}',${index},'delete')">删除</button></div></td></tr>`).join('')||'<tr><td colspan="9">暂无符合条件的图片</td></tr>'}</tbody></table></div></section>`;
+ const rows=['floor','render','style'].flatMap(kind=>V3_ADMIN_ITEMS[kind].map((item,index)=>({item,index,kind}))).filter(({item,kind})=>(!S.v6TypeFilter||kind===S.v6TypeFilter)&&(!S.adminQuery||item.name.includes(S.adminQuery))&&(S.adminStatus==='all'||S.adminStatus===item.status)).sort((a,b)=>a.item.sort-b.item.sort);
+ const content=`<section class="v3-admin-card"><div class="v3-admin-title"><div><h1>空间选材配置</h1><p>管理户型图、效果图与风格参考图</p></div><button class="v3-btn primary" onclick="openAdminModal()">＋ 新增</button></div><div class="v3-admin-filters"><label class="v6-filter-label">类型<select aria-label="筛选类型" onchange="S.v6TypeFilter=this.value;render()"><option value="">全部类型</option><option value="floor" ${S.v6TypeFilter==='floor'?'selected':''}>户型图</option><option value="render" ${S.v6TypeFilter==='render'?'selected':''}>效果图</option><option value="style" ${S.v6TypeFilter==='style'?'selected':''}>风格参考图</option></select></label><input aria-label="搜索图片名称" placeholder="搜索名称" value="${v3Esc(S.adminQuery||'')}" oninput="S.adminQuery=this.value" onkeydown="if(event.key==='Enter')render()"><select aria-label="图片状态" onchange="S.adminStatus=this.value;render()"><option value="all">全部状态</option>${['启用','停用'].map(s=>`<option ${S.adminStatus===s?'selected':''}>${s}</option>`).join('')}</select><button class="v3-btn" onclick="render()">查询</button><button class="v3-btn" onclick="S.adminQuery='';S.adminStatus='all';S.v6TypeFilter='';render()">重置</button></div><div class="v3-table-wrap"><table class="v3-table"><thead><tr><th>序号</th><th>图片</th><th>名称</th><th>类型</th><th>排序</th><th>状态</th><th>操作人</th><th>操作时间</th><th>操作</th></tr></thead><tbody>${rows.map(({item,index,kind},i)=>`<tr><td>${i+1}</td><td><img class="v3-table-thumb" src="${v3Esc(item.image)}" alt="${v3Esc(item.name)}"></td><td><b>${v3Esc(item.name)}</b></td><td>${kind==='floor'?'户型图':kind==='style'?'风格参考图':'效果图'}</td><td>${item.sort}</td><td><span class="v3-status ${item.status==='停用'?'fail':''}">${item.status}</span></td><td>${v3Esc(item.operator)}</td><td>${v3Esc(item.updatedAt)}</td><td><div class="v3-admin-actions"><button onclick="v6ResourceAction('${kind}',${index},'edit')">编辑</button><button onclick="v6ResourceAction('${kind}',${index},'toggle')">${item.status==='启用'?'停用':'启用'}</button><button class="v3-delete-action" onclick="v6ResourceAction('${kind}',${index},'delete')">删除</button></div></td></tr>`).join('')||'<tr><td colspan="9">暂无符合条件的图片</td></tr>'}</tbody></table></div></section>`;
  return v3AdminFrame('空间选材配置',content,S.v3AdminModal?v3AdminItemDialog():'');
 }
 const v6OpenAdmin=openAdminModal;
-openAdminModal=function(){if(!['floor','render'].includes(S.adminSection))return v6OpenAdmin();S.v3AdminForm={name:'',image:'',sort:'1',status:'启用',editIndex:null,resourceType:S.v6TypeFilter||'floor'};S.v3AdminModal='item';render();};
+openAdminModal=function(){if(!['floor','render','style'].includes(S.adminSection))return v6OpenAdmin();S.v3AdminForm={name:'',image:'',sort:'1',status:'启用',editIndex:null,resourceType:S.v6TypeFilter||'floor'};S.v3AdminModal='item';render();};
 function v6ChangeResourceType(kind){S.v3AdminForm.resourceType=kind;render();}
 const v6AdminDialog=v3AdminItemDialog;
 v3AdminItemDialog=function(){
- if(!['floor','render'].includes(S.adminSection))return v6AdminDialog();
- const f=S.v3AdminForm,editing=Number.isInteger(f.editIndex),title=editing?'编辑'+(S.adminSection==='floor'?'户型图':'效果图'):'新增空间选材';
- const typeChoice=editing?'':`<fieldset class="v6-inline-types"><legend>类型 <em>*</em></legend>${[['floor','户型图'],['render','效果图']].map(([key,label])=>`<label><input type="radio" name="resourceType" value="${key}" ${(f.resourceType||S.adminSection)===key?'checked':''} onchange="v6ChangeResourceType(this.value)">${label}</label>`).join('')}</fieldset>`;
+ if(!['floor','render','style'].includes(S.adminSection))return v6AdminDialog();
+ const f=S.v3AdminForm,editing=Number.isInteger(f.editIndex),title=editing?'编辑'+(S.adminSection==='floor'?'户型图':S.adminSection==='style'?'风格参考图':'效果图'):'新增空间选材';
+ const typeChoice=`<fieldset class="v6-inline-types"><legend>类型 <em>*</em></legend>${[['floor','户型图'],['render','效果图'],['style','风格参考图']].map(([key,label])=>`<label><input type="radio" name="resourceType" value="${key}" ${(f.resourceType||S.adminSection)===key?'checked':''} onchange="v6ChangeResourceType(this.value)">${label}</label>`).join('')}</fieldset>`;
  return `<div class="v3-mask"><section class="v3-admin-dialog" role="dialog" aria-modal="true" aria-label="${title}"><header class="v3-dialog-head"><h2>${title}</h2><button class="v3-icon-btn" aria-label="关闭图片编辑" onclick="S.v3AdminModal=null;render()">×</button></header><div class="v3-dialog-body">${typeChoice}<div class="v3-admin-form"><label><span class="v6-field-caption">名称 <em>*</em></span><input aria-label="图片名称" aria-required="true" value="${v3Esc(f.name)}" oninput="S.v3AdminForm.name=this.value"></label><label><span class="v6-field-caption">排序 <em>*</em></span><input aria-label="图片排序" aria-required="true" type="number" min="1" value="${v3Esc(f.sort)}" oninput="S.v3AdminForm.sort=this.value"></label><label class="v3-admin-upload">${f.image?`<img src="${v3Esc(f.image)}" alt="${v3Esc(f.name)}">`:'<span>＋ 选择图片</span>'}<input aria-label="上传图片" aria-required="true" type="file" accept="image/png,image/jpeg" onchange="v3AdminFileChosen(event)"></label></div></div><footer class="v3-dialog-foot"><button class="v3-btn" onclick="S.v3AdminModal=null;render()">取消</button><button class="v3-btn primary" onclick="saveV3AdminItem()">保存</button></footer></section></div>`;
 };
 const v6SaveAdmin=saveV3AdminItem;
 saveV3AdminItem=function(){
- if(!['floor','render'].includes(S.adminSection))return v6SaveAdmin();
+ if(!['floor','render','style'].includes(S.adminSection))return v6SaveAdmin();
  const f=S.v3AdminForm,sort=Number(f.sort);
  if(!f.name.trim()||!f.image||!Number.isInteger(sort)||sort<1){toast('请填写名称、图片和有效排序');return;}
- const target=Number.isInteger(f.editIndex)?S.adminSection:(f.resourceType||S.adminSection);
+ const source=S.adminSection,target=f.resourceType||source,editing=Number.isInteger(f.editIndex);
+ if(!['floor','render','style'].includes(target))return;
+ if(editing&&source!==target){
+  const labels={floor:'户型图',render:'效果图',style:'风格参考图'};
+  if(!confirm(`确认将图片类型从“${labels[source]}”改为“${labels[target]}”？\n保存后，该图片将仅在“${labels[target]}”选图列表中展示。`))return;
+ }
  const item={...f,name:f.name.trim(),sort,operator:V6_USER.name,updatedAt:v3Now()};delete item.editIndex;delete item.resourceType;
- if(Number.isInteger(f.editIndex))V3_ADMIN_ITEMS[S.adminSection][f.editIndex]=item;else V3_ADMIN_ITEMS[target].push(item);
+ if(editing&&source===target)V3_ADMIN_ITEMS[source][f.editIndex]=item;
+ else{if(editing)V3_ADMIN_ITEMS[source].splice(f.editIndex,1);V3_ADMIN_ITEMS[target].push(item);}
+ if(source!==target)v4SyncLibrary(source);
  S.adminSection=target;if(S.v6TypeFilter)S.v6TypeFilter=target;S.adminQuery='';S.adminStatus='all';v4SyncLibrary(target);S.v3AdminModal=null;render();
 };
 const v6Toggle=toggleAdminStatus,v6Delete=deleteV3AdminItem;
