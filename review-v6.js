@@ -80,8 +80,8 @@ v5ToggleProject=function(id){const p=v5Project(id);p.status=p.status==='启用'?
 v5DeleteProject=function(id){if(V3_ADMIN_ITEMS.effect.some(x=>x.projectId===id)){toast('该项目已关联案例，请先移出案例再删除');return;}const i=V5_PROJECTS.findIndex(x=>x.id===id);if(i>=0)V5_PROJECTS.splice(i,1);render();};
 const v6SaveProject=v5SaveProject;
 v5SaveProject=function(){const preserved=V3_ADMIN_ITEMS.floor.map(x=>({primary:x.primary,secondary:x.secondary,projectId:x.projectId}));v6SaveProject();V3_ADMIN_ITEMS.floor.forEach((x,i)=>Object.assign(x,preserved[i]));};
-// Management sees all records; iPad retains the current user's creation history.
-function v6CanRead(record){return !!record&&(S.v6Mode==='admin'||record.operator===V6_USER.name);}
+// Both management surfaces can read their listed records; iPad remains personal.
+function v6CanRead(record){return !!record&&(['admin','zhaocai'].includes(S.v6Mode)||record.operator===V6_USER.name);}
 const v6SetMode=setPrototypeMode;
 setPrototypeMode=function(mode){S.v6Mode=mode;S.effectSelection=null;S.v3CallDetail=null;S.callSelected=[];v6SetMode(mode);};
 
