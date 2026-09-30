@@ -141,10 +141,14 @@ async function v6FloorThumbnail(src,box,width,height){
 function v6Enrich(m){const i=MATERIAL_CATALOG.findIndex(x=>x.image===m.image||x.name===m.name);return i<0?m:{...v4Material(i),...m,model:m.model||v4Material(i).model,brand:m.brand||MATERIAL_CATALOG[i].brand};}
 function v6MaterialCopy(m){m=v6Enrich(m);return `<b>${v3Esc(m.name||'本地上传物料')}</b><span>型号：${v3Esc(m.model||'未提供')}</span><span>品类：${v3Esc(m.category||'未提供')}</span><span>品牌：${v3Esc(m.brand||'未提供')}</span>`;}
 function v6OpenMaterial(id){const m=S.materialCandidates.find(x=>x.id===id);if(!m)return;S.v6DetailBack=S.page;S.v5CaseMaterial=v6Enrich(m);S.page='material';render();}
+function v6ReplacementMaterialCopy(m){
+ const source=m.source==='RFID识别'?'RFID':m.source;
+ return v6MaterialCopy(m)+(['天工云仓','RFID','本地上传'].includes(source)?`<span class="v6-material-source">来源：${v3Esc(source)}</span>`:'');
+}
 const v6BackMaterial=v5BackToCaseMaterial;
 v5BackToCaseMaterial=function(){if(!S.v6DetailBack)return v6BackMaterial();S.v5CaseMaterial=null;S.page=S.v6DetailBack;S.v6DetailBack=null;render();};
 const v6Marker=markerScreen;
-markerScreen=function(){const t=document.createElement('template');t.innerHTML=v6Marker();t.content.querySelectorAll('.v3-marker-material').forEach((card,i)=>{const m=S.materialCandidates[i];card.querySelector('.v3-marker-material-copy').innerHTML=v6MaterialCopy(m);});return t.innerHTML;};
+markerScreen=function(){const t=document.createElement('template');t.innerHTML=v6Marker();t.content.querySelectorAll('.v3-marker-material').forEach((card,i)=>{const m=S.materialCandidates[i];card.querySelector('.v3-marker-material-copy').innerHTML=v6ReplacementMaterialCopy(m);});return t.innerHTML;};
 const v6Scene=v4Scene;
 v4Scene=function(image,points,mode){const t=document.createElement('template');t.innerHTML=v6Scene(image,points,mode);const m=points.find(x=>x.id===S.v4PointSelected)?.material,copy=t.content.querySelector('.v4-point-copy');if(mode==='case'&&m&&copy)copy.innerHTML=v6MaterialCopy(m);return t.innerHTML;};
 const v6MaterialDetail=materialDetail;
@@ -164,9 +168,11 @@ materialSourceDialog=function(){
 const v6Compare=compareScreen;
 compareScreen=function(){
  const t=document.createElement('template');t.innerHTML=v6Compare();
- t.content.querySelectorAll('.v3-compare-materials .v3-marker-material').forEach(card=>{
-  const img=card.querySelector('img'),material=S.materialCandidates.find(m=>m.image===img?.getAttribute('src'));if(!material)return;
-  const copy=card.querySelector('.v3-marker-material-copy');if(copy)copy.innerHTML=v6MaterialCopy(material);
+ const usedIds=new Set(S.marks.map(mark=>mark.materialId));
+ const materials=[...S.materialCandidates.filter(m=>usedIds.has(m.id)),...S.materialCandidates.filter(m=>!usedIds.has(m.id))];
+ t.content.querySelectorAll('.v3-compare-materials .v3-marker-material').forEach((card,index)=>{
+  const material=materials[index];if(!material)return;
+  const copy=card.querySelector('.v3-marker-material-copy');if(copy)copy.innerHTML=v6ReplacementMaterialCopy(material);
   card.insertAdjacentHTML('beforeend',`<button class="v6-catalog-detail" onclick="v6OpenMaterial('${material.id}')">详情</button>`);
  });return t.innerHTML;
 };
