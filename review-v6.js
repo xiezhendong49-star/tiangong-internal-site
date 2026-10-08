@@ -153,7 +153,6 @@ const v6Scene=v4Scene;
 v4Scene=function(image,points,mode){const t=document.createElement('template');t.innerHTML=v6Scene(image,points,mode);const m=points.find(x=>x.id===S.v4PointSelected)?.material,copy=t.content.querySelector('.v4-point-copy');if(mode==='case'&&m&&copy)copy.innerHTML=v6MaterialCopy(m);return t.innerHTML;};
 const v6MaterialDetail=materialDetail;
 materialDetail=function(){const t=document.createElement('template');t.innerHTML=v6MaterialDetail();t.content.querySelector('.detail-title>b')?.remove();return t.innerHTML;};
-function v6OpenCatalogDetail(index){const material=MATERIAL_CATALOG[index];if(!material)return;S.v6DetailBack=S.page;S.v5CaseMaterial=v4Material(index);S.page='material';render();}
 const v6SourceDialog=materialSourceDialog;
 materialSourceDialog=function(){
  const t=document.createElement('template');t.innerHTML=v6SourceDialog();
@@ -162,7 +161,7 @@ materialSourceDialog=function(){
   const wrapper=document.createElement('article');wrapper.className=card.className+' v6-catalog-card';
   const select=document.createElement('button');select.className='v6-catalog-select';select.setAttribute('onclick',action);select.setAttribute('aria-label','选择物料 '+material.name);select.append(card.querySelector('.v3-library-image'));
   const copy=document.createElement('div');copy.className='v6-catalog-copy';copy.innerHTML=v6MaterialCopy(material);select.append(copy);wrapper.append(select);
-  wrapper.insertAdjacentHTML('beforeend',`<button class="v6-catalog-detail" onclick="v6OpenCatalogDetail(${index})">查看详情</button>`);card.replaceWith(wrapper);
+  card.replaceWith(wrapper);
  });return t.innerHTML;
 };
 const v6Compare=compareScreen;
@@ -173,7 +172,9 @@ compareScreen=function(){
  t.content.querySelectorAll('.v3-compare-materials .v3-marker-material').forEach((card,index)=>{
   const material=materials[index];if(!material)return;
   const copy=card.querySelector('.v3-marker-material-copy');if(copy)copy.innerHTML=v6ReplacementMaterialCopy(material);
-  card.insertAdjacentHTML('beforeend',`<button class="v6-catalog-detail" onclick="v6OpenMaterial('${material.id}')">详情</button>`);
+  const detail=document.createElement('button');detail.className='v6-compare-detail';detail.textContent='查看详情';
+  detail.setAttribute('onclick',`v6OpenMaterial(${JSON.stringify(material.id)})`);
+  card.querySelector('.v3-marker-material-actions').append(detail);
  });return t.innerHTML;
 };
 // Preserve the existing case-to-material-replacement entry. Case data is not mutated.
