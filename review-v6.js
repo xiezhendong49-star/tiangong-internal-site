@@ -109,7 +109,7 @@ async function v6DownloadRecords(records){
  for(const type of ['材质替换','生成效果图']){
   const logs=records.filter(x=>x.type===type);if(!logs.length)continue;
   const material=type==='材质替换',sheet=workbook.addWorksheet(material?'材质替换用料明细':'效果图生成记录',{views:[{state:'frozen',ySplit:1,showGridLines:false}]});
-  const headers=material?['记录编号','操作人','提交时间','平台编号','物料名称','物料分类','标点编号','物料图片','带标点原图','结果图']:['记录编号','操作人','提交时间','生成视角','户型图及框选范围','风格参考图','结果图'];
+  const headers=material?['记录编号','操作人','提交时间','平台编号','物料名称','物料分类','标点编号','物料图片','带标点原图','结果图']:['记录编号','操作人','提交时间','生成视角','户型图及所选空间','风格参考图','结果图'];
   sheet.columns=(material?[28,16,23,22,24,18,12,18,42,42]:[28,16,23,24,48,40,48]).map(width=>({width}));sheet.addRow(headers);
   sheet.getRow(1).height=30;sheet.getRow(1).eachCell(c=>{c.font={name:'Microsoft YaHei',bold:true,color:{argb:'FFFFFFFF'}};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF147E9E'}};});
   async function addImage(src,col,row,w,h,points=[],box=null){if(!src){sheet.getCell(row,col).value='暂无图片';return;}const base64=box?await v6FloorThumbnail(src,box,w*2,h*2):await materialExcelThumbnail(src,w*2,h*2,points);const image=workbook.addImage({base64,extension:'png'});sheet.addImage(image,{tl:{col:col-1+.08,row:row-1+.08},ext:{width:w,height:h},editAs:'oneCell'});}
@@ -117,7 +117,7 @@ async function v6DownloadRecords(records){
    const start=sheet.rowCount+1,points=log.points||[],items=material?(points.length?points:[null]):[null];
    for(const [i,point] of items.entries()){
     const m=point?.material||{},box=log.floorBox||log.inputs?.find(x=>x.floorBox)?.floorBox;
-    const direction=V3_CAMERAS.find(x=>x.id===box?.view)?.label||'AI 自动判断';
+    const direction=log.modelSelection?.viewName||V3_CAMERAS.find(x=>x.id===box?.view)?.label||'AI 自动判断';
     const row=sheet.addRow(material?[log.id,log.operator,log.time,m.platformCode||'',m.name||'',m.category||'',point?i+1:'','','','']:[log.id,log.operator,log.time,direction,'','','']);row.height=112;
     for(let c=1;c<=headers.length;c++){const cell=row.getCell(c);cell.font={name:'Microsoft YaHei',size:10};cell.alignment={vertical:'middle',horizontal:'center',wrapText:true};cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:group%2?'FFFFFFFF':'FFEAF5FA'}};}
     if(material&&m.image)await addImage(m.image,8,row.number,96,96);
