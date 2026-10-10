@@ -22,19 +22,20 @@ function v7SeedRooms(image){
 }
 V3_ADMIN_ITEMS.floor.forEach((item,i)=>{item.modelId='floor-model-'+i;item.modelVersion=1;item.rooms=v7SeedRooms(item.image);item.modelingStatus=item.rooms.length?'建模完成':(i===7?'建模失败':'建模中');});
 const v7Sync=v4SyncLibrary;
-v4SyncLibrary=function(kind){v7Sync(kind);if(kind==='floor'){const available=V3_FLOORS.filter(x=>x.modelingStatus==='建模完成'&&x.rooms?.some(r=>r.views?.length));V3_FLOORS.splice(0,V3_FLOORS.length,...available);}};
+v4SyncLibrary=function(kind){v7Sync(kind);if(kind==='floor'){const available=V3_FLOORS.filter(x=>x.modelingStatus==='建模完成'&&x.rooms?.some(r=>v7AvailableViews(r).length));V3_FLOORS.splice(0,V3_FLOORS.length,...available);}};
 v4SyncLibrary('floor');
 S.v7Selection=null;S.v7Draft=null;
 function v7Floor(draft=false){const selected=draft?S.v7Draft:S.v7Selection;return V3_FLOORS.find(f=>f.modelId===selected?.floorId);}
 function v7RoomSelected(draft=false){const selected=draft?S.v7Draft:S.v7Selection;return v7Floor(draft)?.rooms.find(r=>r.id===selected?.roomId);}
-function v7ViewSelected(draft=false){const selected=draft?S.v7Draft:S.v7Selection;return v7RoomSelected(draft)?.views.find(v=>v.id===selected?.viewId);}
+function v7AvailableViews(room){return (room?.views||[]).filter(view=>view.id&&view.whiteModelId&&V3_CAMERAS.some(camera=>camera.id===view.cameraPosition));}
+function v7ViewSelected(draft=false){const selected=draft?S.v7Draft:S.v7Selection;return v7AvailableViews(v7RoomSelected(draft)).find(view=>view.id===selected?.viewId);}
 function v7Valid(draft=false){const selected=draft?S.v7Draft:S.v7Selection,f=v7Floor(draft);return !!(f&&f.modelingStatus==='建模完成'&&f.modelVersion===selected?.version&&v7ViewSelected(draft));}
 function v7SelectFloor(index){const f=V3_FLOORS[index];if(!f)return;S.v7Draft={floorId:f.modelId,roomId:null,viewId:null,version:f.modelVersion};S.floorDraftIndex=index;S.floorDraftImage=f.image;S.floorDraftName=f.name;S.floorDraftBox=null;S.floorDraftZoom=1;S.floorFocus=null;S.v7PanX=0;S.v7PanY=0;render();}
 const v7OpenPicker=openGeneratePicker;
 openGeneratePicker=function(kind){if(kind!=='floor')return v7OpenPicker(kind);S.flowModal='floor';S.v7Draft=S.v7Selection?structuredClone(S.v7Selection):null;const f=v7Floor(true);if(!f){if(V3_FLOORS.length){v7SelectFloor(0);return;}S.floorDraftImage='';S.floorDraftName='';S.floorDraftIndex=-2;}else{S.floorDraftImage=f.image;S.floorDraftName=f.name;S.floorDraftIndex=V3_FLOORS.indexOf(f);}S.floorDraftZoom=1;S.floorFocus=null;S.v7PanX=0;S.v7PanY=0;render();};
 pickV3Floor=v7SelectFloor;
-function v7PickRoom(id){const room=v7Floor(true)?.rooms.find(r=>r.id===id);if(!room)return;if(S.v7Draft.roomId!==id){S.v7Draft.roomId=id;S.v7Draft.viewId=room.views.length===1?room.views[0].id:null;}render();}
-function v7PickView(id){if(!v7RoomSelected(true)?.views.some(v=>v.id===id))return;S.v7Draft.viewId=id;render();}
+function v7PickRoom(id){const room=v7Floor(true)?.rooms.find(r=>r.id===id);if(!room)return;const views=v7AvailableViews(room);if(S.v7Draft.roomId!==id||!views.some(view=>view.id===S.v7Draft.viewId)){S.v7Draft.roomId=id;S.v7Draft.viewId=views[0]?.id||null;}render();}
+function v7PickView(id){if(!v7AvailableViews(v7RoomSelected(true)).some(v=>v.id===id))return;S.v7Draft.viewId=id;render();}
 function v7PolygonCss(points){return 'polygon('+points.map(p=>p[0]+'% '+p[1]+'%').join(',')+')';}
 const v7OldBox=v3FloorBox;
 v3FloorBox=function(box,mode){if(!box?.preset)return v7OldBox(box,mode);return `<div class="v3-crop-box v7-preset-highlight" data-floor-x="${box.x}" data-floor-y="${box.y}" data-floor-w="${box.w}" data-floor-h="${box.h}" style="clip-path:${v7PolygonCss(box.polygon)}"></div>${box.view?`<div class="v3-crop-box v7-static-view" data-floor-x="${box.x}" data-floor-y="${box.y}" data-floor-w="${box.w}" data-floor-h="${box.h}">${v3CameraOverlay(box,false)}</div>`:''}`;};
@@ -99,7 +100,7 @@ render();
 function v7InlineViews(room,view){
  if(!room)return '';
  const icon='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="11" height="10" rx="2"/><path d="m14 10 6-4v12l-6-4z"/></svg>';
- return '<div class="v7-inline-views" role="group" aria-label="预设视角">'+(view?v3CameraFieldMarkup(V3_CAMERAS.find(c=>c.id===view.cameraPosition)):'')+room.views.filter(v=>V3_CAMERAS.some(c=>c.id===v.cameraPosition)).map(v=>`<button class="v3-camera v7-view ${view===v?'selected':''}" data-view-id="${v.id}" data-position="${v.cameraPosition}" aria-label="${v3Esc(v.name)}" title="${v3Esc(v.name)}" aria-pressed="${view===v}" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();v7PickView('${v.id}')">${icon}</button>`).join('')+'</div>';
+ return '<div class="v7-inline-views" role="group" aria-label="预设视角">'+(view?v3CameraFieldMarkup(V3_CAMERAS.find(c=>c.id===view.cameraPosition)):'')+v7AvailableViews(room).map(v=>`<button class="v3-camera v7-view ${view===v?'selected':''}" data-view-id="${v.id}" data-position="${v.cameraPosition}" aria-label="${v3Esc(v.name)}" title="${v3Esc(v.name)}" aria-pressed="${view===v}" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();v7PickView('${v.id}')">${icon}</button>`).join('')+'</div>';
 }
 function v7LayoutInlineViews(){
  const canvas=document.querySelector('.v7-room-canvas'),plan=canvas?.querySelector('.v7-original-plan'),room=v7RoomSelected(true);
