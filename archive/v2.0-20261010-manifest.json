@@ -1,0 +1,11 @@
+{
+  "version": "2.0",
+  "status": "archived",
+  "archiveDate": "2026-10-10",
+  "url": "https://xiezhendong49-star.github.io/tiangong-internal-site/archive/v2.0-20261010/",
+  "sourceCommit": "408686d9e67b2ff19c03b88fc26584627cf3a068",
+  "sourceTree": "248176f12c1974277c9610d584218a424c34ec64",
+  "description": "本次人工建模与预设空间改版前的内部 Demo 完整快照。保留户型图上传、自由框选及八方向摄像头交互，后续不随3.0迭代修改。",
+  "currentVersion": "3.0",
+  "currentUrl": "https://xiezhendong49-star.github.io/tiangong-internal-site/"
+}
