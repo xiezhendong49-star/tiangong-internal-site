@@ -117,7 +117,7 @@ async function v6DownloadRecords(records){
    const start=sheet.rowCount+1,points=log.points||[],items=material?(points.length?points:[null]):[null];
    for(const [i,point] of items.entries()){
     const m=point?.material||{},box=log.floorBox||log.inputs?.find(x=>x.floorBox)?.floorBox;
-    const direction=V3_CAMERAS.find(x=>x.id===(log.modelSelection?.cameraPosition||box?.view))?.label||'AI 自动判断';
+    const direction=box?.preset?'见户型图':V3_CAMERAS.find(x=>x.id===box?.view)?.label||'AI 自动判断';
     const row=sheet.addRow(material?[log.id,log.operator,log.time,m.platformCode||'',m.name||'',m.category||'',point?i+1:'','','','']:[log.id,log.operator,log.time,direction,'','','']);row.height=112;
     for(let c=1;c<=headers.length;c++){const cell=row.getCell(c);cell.font={name:'Microsoft YaHei',size:10};cell.alignment={vertical:'middle',horizontal:'center',wrapText:true};cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:group%2?'FFFFFFFF':'FFEAF5FA'}};}
     if(material&&m.image)await addImage(m.image,8,row.number,96,96);
