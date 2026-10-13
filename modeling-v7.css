@@ -18,3 +18,9 @@
 .v7-model-status.failed{background:#fdeeee;color:#b63d3d}.v7-model-filter-label select{min-width:144px}
 
 .v7-resource-table th:nth-child(6),.v7-resource-table td:nth-child(6){text-align:center;vertical-align:middle}.v7-resource-table td:nth-child(6) .v7-model-caption{text-align:center}.v7-resource-table td:nth-child(6) .v7-model-status{vertical-align:middle}
+
+/* Point selection and continuous pan/pinch. */
+.v7-room-canvas{cursor:grab}.v7-room-canvas.dragging,.v7-room-canvas.dragging .v7-room-hit{cursor:grabbing}.v7-room-canvas.dragging .v7-room-hit:hover{background:transparent}.v7-room-canvas.dragging .v7-room-hit.selected{background:#b9e9ee}
+.v7-current-room{flex:none;min-height:52px;gap:12px;padding-top:8px}.v7-current-room .v7-reselect{margin-left:auto;min-height:44px;flex:none}.v7-current-room>b{min-width:0}
+
+.v7-closing .v7-picker{pointer-events:none}

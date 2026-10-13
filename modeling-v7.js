@@ -32,9 +32,9 @@ function v7ViewSelected(draft=false){const selected=draft?S.v7Draft:S.v7Selectio
 function v7Valid(draft=false){const selected=draft?S.v7Draft:S.v7Selection,f=v7Floor(draft);return !!(f&&f.modelingStatus==='建模完成'&&f.modelVersion===selected?.version&&v7ViewSelected(draft));}
 function v7SelectFloor(index){const f=V3_FLOORS[index];if(!f)return;S.v7Draft={floorId:f.modelId,roomId:null,viewId:null,version:f.modelVersion};S.floorDraftIndex=index;S.floorDraftImage=f.image;S.floorDraftName=f.name;S.floorDraftBox=null;S.floorDraftZoom=1;S.floorFocus=null;S.v7PanX=0;S.v7PanY=0;render();}
 const v7OpenPicker=openGeneratePicker;
-openGeneratePicker=function(kind){if(kind!=='floor')return v7OpenPicker(kind);S.flowModal='floor';S.v7Draft=S.v7Selection?structuredClone(S.v7Selection):null;const f=v7Floor(true);if(!f){if(V3_FLOORS.length){v7SelectFloor(0);return;}S.floorDraftImage='';S.floorDraftName='';S.floorDraftIndex=-2;}else{S.floorDraftImage=f.image;S.floorDraftName=f.name;S.floorDraftIndex=V3_FLOORS.indexOf(f);}S.floorDraftZoom=1;S.floorFocus=null;S.v7PanX=0;S.v7PanY=0;render();};
+openGeneratePicker=function(kind){if(S.v7Closing)return;if(kind!=='floor')return v7OpenPicker(kind);S.flowModal='floor';S.v7Draft=S.v7Selection?structuredClone(S.v7Selection):null;const f=v7Floor(true);if(!f){if(V3_FLOORS.length){v7SelectFloor(0);v7AnimatePickerEnter();return;}S.floorDraftImage='';S.floorDraftName='';S.floorDraftIndex=-2;}else{S.floorDraftImage=f.image;S.floorDraftName=f.name;S.floorDraftIndex=V3_FLOORS.indexOf(f);}S.floorDraftZoom=1;S.floorFocus=null;S.v7PanX=0;S.v7PanY=0;render();v7AnimatePickerEnter();};
 pickV3Floor=v7SelectFloor;
-function v7PickRoom(id){const room=v7Floor(true)?.rooms.find(r=>r.id===id);if(!room)return;const views=v7AvailableViews(room);if(S.v7Draft.roomId!==id||!views.some(view=>view.id===S.v7Draft.viewId)){S.v7Draft.roomId=id;S.v7Draft.viewId=views[0]?.id||null;}render();}
+function v7PickRoom(id){const room=v7Floor(true)?.rooms.find(r=>r.id===id);if(!room)return;const views=v7AvailableViews(room);if(S.v7Draft.roomId!==id||!views.some(view=>view.id===S.v7Draft.viewId)){S.v7Draft.roomId=id;S.v7Draft.viewId=views[0]?.id||null;}render();v7FocusRoom();}
 function v7PickView(id){if(!v7AvailableViews(v7RoomSelected(true)).some(v=>v.id===id))return;S.v7Draft.viewId=id;render();}
 function v7PolygonCss(points){return 'polygon('+points.map(p=>p[0]+'% '+p[1]+'%').join(',')+')';}
 const v7OldBox=v3FloorBox;
@@ -42,20 +42,98 @@ v3FloorBox=function(box,mode){if(!box?.preset)return v7OldBox(box,mode);return `
 const v7OldPicker=generatePickerDialog;
 generatePickerDialog=function(){
  if(S.flowModal!=='floor')return v7OldPicker();const f=v7Floor(true),room=v7RoomSelected(true),view=v7ViewSelected(true);
- return `<div class="v3-mask"><section class="v3-dialog v7-picker" role="dialog" aria-modal="true" aria-labelledby="v7-picker-title"><header class="v3-dialog-head"><h2 id="v7-picker-title">选择户型与空间</h2><button class="v3-icon-btn" aria-label="关闭户型选择" onclick="closeGeneratePicker()">×</button></header><div class="v3-dialog-body v7-picker-body"><aside class="v3-picker-list"><div class="v3-picker-list-head"><b>户型图</b><span>${V3_FLOORS.length} 张</span></div><div class="v3-mini-grid">${V3_FLOORS.map((item,i)=>`<button class="v3-mini-card ${f===item?'on':''}" aria-pressed="${f===item}" onclick="v7SelectFloor(${i})"><img src="${v3Esc(item.image)}" alt="${v3Esc(item.name)}"><span>${v3Esc(item.name)}</span></button>`).join('')||'<div class="v7-empty">暂无可用户型</div>'}</div></aside><div class="v7-selection-side"><div class="v3-crop-title"><span>${v3Esc(f?.name||'户型图')}</span><div class="v7-zoom"><button class="v3-btn" aria-label="缩小户型图" onclick="v7Zoom(-.25)">−</button><span>${Math.round((S.floorDraftZoom||1)*100)}%</span><button class="v3-btn" aria-label="放大户型图" onclick="v7Zoom(.25)">＋</button></div></div><div class="v7-room-canvas" onpointerdown="v7Pointer(event)" onwheel="v7Wheel(event)">${f?`<div class="v7-floor-sheet" style="aspect-ratio:${f.image.includes('chunhe')?'3444.72 / 4089.4':'1400 / 900'};transform:translate(${S.v7PanX||0}px,${S.v7PanY||0}px) scale(${S.floorDraftZoom||1})"><div class="v7-original-plan ${f.image.includes('chunhe')?'cropped':''}"><img src="${v3Esc(f.image)}" alt="${v3Esc(f.name)}" draggable="false">${f.rooms.map(r=>`<button class="v7-room-hit ${room===r?'selected':''}" style="clip-path:${v7PolygonCss(r.points)}" aria-label="选择${v3Esc(r.name)}" aria-pressed="${room===r}" data-room="${r.id}" onclick="v7RoomClick(event,'${r.id}')"></button>`).join('')}</div></div>${v7InlineViews(room,view)}`:'<div class="v7-empty">暂无可用户型</div>'}</div><div class="v7-current-room"><span>${room?'已选空间':'选择空间'}</span><b>${room?v3Esc(room.name):'点击户型图中的空间'}</b></div></div></div><footer class="v3-dialog-foot"><button class="v3-btn" onclick="closeGeneratePicker()">取消</button><button class="v3-btn primary" ${v7Valid(true)?'':'disabled'} onclick="confirmGeneratePicker()">确定</button></footer></section></div>`;
+ return `<div class="v3-mask v7-picker-mask"><section class="v3-dialog v7-picker" role="dialog" aria-modal="true" aria-labelledby="v7-picker-title"><header class="v3-dialog-head"><h2 id="v7-picker-title">选择户型与空间</h2><button class="v3-icon-btn" aria-label="关闭户型选择" onclick="closeGeneratePicker()">×</button></header><div class="v3-dialog-body v7-picker-body"><aside class="v3-picker-list"><div class="v3-picker-list-head"><b>户型图</b><span>${V3_FLOORS.length} 张</span></div><div class="v3-mini-grid">${V3_FLOORS.map((item,i)=>`<button class="v3-mini-card ${f===item?'on':''}" aria-pressed="${f===item}" onclick="v7SelectFloor(${i})"><img src="${v3Esc(item.image)}" alt="${v3Esc(item.name)}"><span>${v3Esc(item.name)}</span></button>`).join('')||'<div class="v7-empty">暂无可用户型</div>'}</div></aside><div class="v7-selection-side"><div class="v3-crop-title"><span>${v3Esc(f?.name||'户型图')}</span><div class="v7-zoom"><button class="v3-btn" aria-label="缩小户型图" onclick="v7Zoom(-.25)">−</button><span>${Math.round((S.floorDraftZoom||1)*100)}%</span><button class="v3-btn" aria-label="放大户型图" onclick="v7Zoom(.25)">＋</button></div></div><div class="v7-room-canvas" onpointerdown="v7Pointer(event)" onwheel="v7Wheel(event)">${f?`<div class="v7-floor-sheet" style="aspect-ratio:${f.image.includes('chunhe')?'3444.72 / 4089.4':'1400 / 900'};transform:translate(${S.v7PanX||0}px,${S.v7PanY||0}px) scale(${S.floorDraftZoom||1})"><div class="v7-original-plan ${f.image.includes('chunhe')?'cropped':''}"><img src="${v3Esc(f.image)}" alt="${v3Esc(f.name)}" draggable="false">${f.rooms.map(r=>`<button class="v7-room-hit ${room===r?'selected':''}" style="clip-path:${v7PolygonCss(r.points)}" aria-label="选择${v3Esc(r.name)}" aria-pressed="${room===r}" data-room="${r.id}" onclick="v7RoomClick(event,'${r.id}')"></button>`).join('')}</div></div>${v7InlineViews(room,view)}`:'<div class="v7-empty">暂无可用户型</div>'}</div><div class="v7-current-room"><span>${room?'已选空间':'选择空间'}</span><b>${room?v3Esc(room.name):'点击户型图中的空间'}</b><button class="v3-btn ghost v7-reselect" ${room||(S.floorDraftZoom||1)!==1||S.v7PanX||S.v7PanY?'':'disabled'} onclick="v7Reselect()">重选</button></div></div></div><footer class="v3-dialog-foot"><button class="v3-btn" onclick="closeGeneratePicker()">取消</button><button class="v3-btn primary" ${v7Valid(true)?'':'disabled'} onclick="confirmGeneratePicker()">确定</button></footer></section></div>`;
 };
 const v7Confirm=confirmGeneratePicker;
-confirmGeneratePicker=function(){if(S.flowModal!=='floor')return v7Confirm();if(!v7Valid(true)){toast('请选择空间和视角');return;}S.v7Selection=structuredClone(S.v7Draft);const f=v7Floor(),r=v7RoomSelected();S.floorImage=f.image;S.floorName=f.name;S.floorBox={...structuredClone(r.box),view:v7ViewSelected().cameraPosition};S.flowModal='';render();};
+confirmGeneratePicker=function(){if(S.flowModal!=='floor')return v7Confirm();if(S.v7Closing)return;if(!v7Valid(true)){toast('请选择空间和视角');return;}v7DismissPicker(()=>{S.v7Selection=structuredClone(S.v7Draft);const f=v7Floor(),r=v7RoomSelected();S.floorImage=f.image;S.floorName=f.name;S.floorBox={...structuredClone(r.box),view:v7ViewSelected().cameraPosition};S.flowModal='';render();});};
 const v7Close=closeGeneratePicker;
-closeGeneratePicker=function(){S.v7Draft=null;S.v7PanX=0;S.v7PanY=0;v7Close();};
-function v7Zoom(delta){S.floorDraftZoom=Math.max(1,Math.min(3,(S.floorDraftZoom||1)+delta));if(S.floorDraftZoom===1){S.v7PanX=0;S.v7PanY=0;}render();}
-function v7Wheel(e){e.preventDefault();v7Zoom(e.deltaY>0?-.15:.15);}
-let v7Pointers=new Map(),v7Moved=false;
-function v7Pointer(e){if(e.button!==0&&e.pointerType==='mouse')return;const canvas=e.currentTarget;v7Pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});v7Moved=false;const start={x:e.clientX,y:e.clientY,panX:S.v7PanX||0,panY:S.v7PanY||0,zoom:S.floorDraftZoom||1};let pinch=null;
- const move=ev=>{if(!v7Pointers.has(ev.pointerId))return;v7Pointers.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});const points=[...v7Pointers.values()],sheet=canvas.querySelector('.v7-floor-sheet');if(points.length===2){const distance=Math.hypot(points[0].x-points[1].x,points[0].y-points[1].y);if(!pinch)pinch={distance,zoom:S.floorDraftZoom||1};S.floorDraftZoom=Math.max(1,Math.min(3,pinch.zoom*distance/pinch.distance));v7Moved=true;}else if((S.floorDraftZoom||1)>1&&Math.hypot(ev.clientX-start.x,ev.clientY-start.y)>6){v7Moved=true;const scale=document.getElementById('ipad').getBoundingClientRect().width/1194;const limitX=canvas.clientWidth*(S.floorDraftZoom-1)/2,limitY=canvas.clientHeight*(S.floorDraftZoom-1)/2;S.v7PanX=Math.max(-limitX,Math.min(limitX,start.panX+(ev.clientX-start.x)/scale));S.v7PanY=Math.max(-limitY,Math.min(limitY,start.panY+(ev.clientY-start.y)/scale));}if(sheet)sheet.style.transform=`translate(${S.v7PanX||0}px,${S.v7PanY||0}px) scale(${S.floorDraftZoom||1})`;v7LayoutInlineViews();};
- const end=ev=>{if(ev.pointerId!==e.pointerId)return;v7Pointers.delete(ev.pointerId);window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);if(v7Moved){setTimeout(()=>{v7Moved=false;render();},0);}};window.addEventListener('pointermove',move);window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
+closeGeneratePicker=function(){const close=()=>{S.v7Draft=null;S.v7PanX=0;S.v7PanY=0;v7Close();};if(S.flowModal==='floor')return v7DismissPicker(close);close();};
+function v7PickerMotion(enter){
+ const mask=document.querySelector('.v7-picker-mask'),dialog=mask?.querySelector('.v7-picker');if(!dialog)return [];
+ [mask,dialog].forEach(node=>node.getAnimations().forEach(animation=>animation.cancel()));
+ const options={duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:200,easing:enter?'cubic-bezier(.2,.7,.3,1)':'cubic-bezier(.4,0,.6,1)',fill:'both'};
+ const frames=[{opacity:0,transform:'translateY(10px) scale(.98)'},{opacity:1,transform:'translateY(0) scale(1)'}];
+ return [mask.animate(enter?[{opacity:0},{opacity:1}]:[{opacity:1},{opacity:0}],options),dialog.animate(enter?frames:[...frames].reverse(),options)];
 }
-function v7RoomClick(e,id){if(v7Moved)return;e.stopPropagation();v7PickRoom(id);}
+function v7AnimatePickerEnter(){v7PickerMotion(true);}
+function v7DismissPicker(done){
+ if(S.v7Closing)return;
+ cancelAnimationFrame(v7FocusFrame);S.v7Closing=true;
+ const mask=document.querySelector('.v7-picker-mask');mask?.classList.add('v7-closing');mask?.setAttribute('aria-busy','true');
+ const animations=v7PickerMotion(false);
+ if(!animations.length){S.v7Closing=false;done();return;}
+ return Promise.allSettled(animations.map(animation=>animation.finished)).then(()=>{S.v7Closing=false;if(S.flowModal==='floor')done();});
+}
+// A shared gesture session prevents duplicate pinch handlers and one-finger jumps.
+let v7Pointers=new Map(),v7Gesture=null,v7SuppressClickUntil=0,v7FocusFrame=0;
+function v7CanvasScale(canvas){return canvas.getBoundingClientRect().width/canvas.offsetWidth||1;}
+function v7ApplyViewport(){
+ const canvas=document.querySelector('.v7-room-canvas');if(!canvas)return;
+ const sheet=canvas.querySelector('.v7-floor-sheet');if(!sheet)return;
+ const zoom=S.floorDraftZoom||1;
+ const lx=(sheet.offsetWidth*zoom+canvas.clientWidth)/2-60,ly=(sheet.offsetHeight*zoom+canvas.clientHeight)/2-60;
+ S.v7PanX=Math.max(-lx,Math.min(lx,S.v7PanX||0));S.v7PanY=Math.max(-ly,Math.min(ly,S.v7PanY||0));
+ sheet.style.transform=`translate(${S.v7PanX}px,${S.v7PanY}px) scale(${zoom})`;
+ const label=canvas.closest('.v7-selection-side').querySelector('.v7-zoom span');if(label)label.textContent=Math.round(zoom*100)+'%';
+ const reset=canvas.closest('.v7-selection-side').querySelector('.v7-reselect');if(reset)reset.disabled=!v7RoomSelected(true)&&Math.abs(zoom-1)<.001&&Math.abs(S.v7PanX)<.001&&Math.abs(S.v7PanY)<.001;
+ v7LayoutInlineViews();
+}
+function v7FocusRoom(){
+ const canvas=document.querySelector('.v7-room-canvas'),plan=canvas?.querySelector('.v7-original-plan'),room=v7RoomSelected(true);if(!plan||!room)return;
+ cancelAnimationFrame(v7FocusFrame);
+ const c=canvas.getBoundingClientRect(),p=plan.getBoundingClientRect(),scale=v7CanvasScale(canvas),zoom=S.floorDraftZoom||1;
+ const w=p.width/scale/zoom,h=p.height/scale/zoom;
+ const cx=(p.left-c.left+p.width*(room.box.x+room.box.w/2)/100)/scale;
+ const cy=(p.top-c.top+p.height*(room.box.y+room.box.h/2)/100)/scale;
+ const ox=(cx-canvas.clientWidth/2-(S.v7PanX||0))/zoom,oy=(cy-canvas.clientHeight/2-(S.v7PanY||0))/zoom;
+ const targetZoom=Math.max(.8,Math.min(3,(canvas.clientWidth-144)/(w*room.box.w/100),(canvas.clientHeight-144)/(h*room.box.h/100)));
+ v7AnimateViewport({zoom:targetZoom,x:-ox*targetZoom,y:-oy*targetZoom});
+}
+function v7AnimateViewport(to){
+ cancelAnimationFrame(v7FocusFrame);const canvas=document.querySelector('.v7-room-canvas');if(!canvas)return;
+ const from={zoom:S.floorDraftZoom||1,x:S.v7PanX||0,y:S.v7PanY||0};
+ let started=null;const duration=matchMedia('(prefers-reduced-motion: reduce)').matches?0:420;
+ function frame(now){if(!canvas.isConnected)return;if(started===null)started=now;const t=duration?Math.min(1,Math.max(0,(now-started)/duration)):1,k=1-Math.pow(1-t,3);S.floorDraftZoom=from.zoom+(to.zoom-from.zoom)*k;S.v7PanX=from.x+(to.x-from.x)*k;S.v7PanY=from.y+(to.y-from.y)*k;v7ApplyViewport();if(t<1)v7FocusFrame=requestAnimationFrame(frame);}
+ v7FocusFrame=requestAnimationFrame(frame);
+}
+function v7ZoomAt(zoom,x,y){
+ const canvas=document.querySelector('.v7-room-canvas');if(!canvas)return;
+ cancelAnimationFrame(v7FocusFrame);const old=S.floorDraftZoom||1,next=Math.max(.8,Math.min(3,zoom));
+ const ox=(x??canvas.clientWidth/2)-canvas.clientWidth/2,oy=(y??canvas.clientHeight/2)-canvas.clientHeight/2;
+ S.v7PanX=ox-(ox-(S.v7PanX||0))*next/old;S.v7PanY=oy-(oy-(S.v7PanY||0))*next/old;S.floorDraftZoom=next;v7ApplyViewport();
+}
+function v7Zoom(delta){v7ZoomAt((S.floorDraftZoom||1)+delta);}
+function v7Reselect(){cancelAnimationFrame(v7FocusFrame);if(S.v7Draft){S.v7Draft.roomId=null;S.v7Draft.viewId=null;}v7SuppressClickUntil=0;render();v7AnimateViewport({zoom:1,x:0,y:0});}
+function v7Wheel(e){e.preventDefault();const canvas=e.currentTarget,c=canvas.getBoundingClientRect(),scale=v7CanvasScale(canvas),x=(e.clientX-c.left)/scale,y=(e.clientY-c.top)/scale;v7ZoomAt((S.floorDraftZoom||1)*Math.exp(-e.deltaY*.002),x,y);}
+function v7RebaseGesture(){
+ const points=[...v7Pointers.values()];if(!points.length)return;
+ v7Gesture={points,zoom:S.floorDraftZoom||1,x:S.v7PanX||0,y:S.v7PanY||0,distance:points.length>1?Math.hypot(points[1].x-points[0].x,points[1].y-points[0].y):0};
+}
+function v7Pointer(e){
+ if(e.pointerType==='mouse'&&e.button!==0)return;
+ cancelAnimationFrame(v7FocusFrame);const canvas=e.currentTarget;
+ if(!v7Pointers.size){window.addEventListener('pointermove',v7PointerMove);window.addEventListener('pointerup',v7PointerEnd);window.addEventListener('pointercancel',v7PointerEnd);canvas.classList.add('dragging');}
+ v7Pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,canvas});v7RebaseGesture();
+ if(v7Pointers.size>1)v7SuppressClickUntil=performance.now()+400;
+}
+function v7PointerMove(e){
+ const previous=v7Pointers.get(e.pointerId);if(!previous||!v7Gesture)return;
+ const canvas=previous.canvas;if(!canvas.isConnected){v7PointerEnd(e);return;}
+ v7Pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,canvas});const points=[...v7Pointers.values()],scale=v7CanvasScale(canvas),c=canvas.getBoundingClientRect();
+ const start=v7Gesture.points,center=ps=>({x:ps.reduce((sum,p)=>sum+p.x,0)/ps.length,y:ps.reduce((sum,p)=>sum+p.y,0)/ps.length}),a=center(start),b=center(points);
+ if(points.length>1){
+  const distance=Math.hypot(points[1].x-points[0].x,points[1].y-points[0].y),zoom=Math.max(.8,Math.min(3,v7Gesture.zoom*distance/Math.max(1,v7Gesture.distance))),ratio=zoom/v7Gesture.zoom;
+  const ox=(a.x-c.left)/scale-canvas.clientWidth/2,oy=(a.y-c.top)/scale-canvas.clientHeight/2;
+  S.floorDraftZoom=zoom;S.v7PanX=ox-(ox-v7Gesture.x)*ratio+(b.x-a.x)/scale;S.v7PanY=oy-(oy-v7Gesture.y)*ratio+(b.y-a.y)/scale;
+ }else{if(Math.hypot(b.x-a.x,b.y-a.y)<6)return;S.v7PanX=v7Gesture.x+(b.x-a.x)/scale;S.v7PanY=v7Gesture.y+(b.y-a.y)/scale;}
+ v7SuppressClickUntil=performance.now()+400;e.preventDefault();v7ApplyViewport();
+}
+function v7PointerEnd(e){
+ const point=v7Pointers.get(e.pointerId);if(!point)return;v7Pointers.delete(e.pointerId);
+ if(v7Pointers.size){v7SuppressClickUntil=performance.now()+400;v7RebaseGesture();return;}
+ point.canvas.classList.remove('dragging');v7Gesture=null;window.removeEventListener('pointermove',v7PointerMove);window.removeEventListener('pointerup',v7PointerEnd);window.removeEventListener('pointercancel',v7PointerEnd);
+}
+function v7RoomClick(e,id){e.stopPropagation();if(performance.now()<v7SuppressClickUntil)return;v7PickRoom(id);}
 const v7Setup=generateSetupScreen;
 generateSetupScreen=function(){const t=document.createElement('template');t.innerHTML=v7Setup();const r=v7RoomSelected(),v=v7ViewSelected();if(r&&v){const p=t.content.querySelector('.v3-choice-panel');p.insertAdjacentHTML('beforeend',`<div class="v7-selection-summary"><b>${v3Esc(r.name)}</b></div>`);}t.content.querySelector('[onclick="generateBase()"]')?.toggleAttribute('disabled',!v7Valid()||!S.styleImage);return t.innerHTML;};
 const v7Start=startRoute;
@@ -119,10 +197,10 @@ function v7LayoutInlineViews(){
  const width=p.width*room.box.w/100/scale,height=p.height*room.box.h/100/scale;
  canvas.querySelectorAll('.v7-view').forEach(button=>{
   const camera=V3_CAMERAS.find(c=>c.id===button.dataset.position);if(!camera)return;
-  const x=Math.max(28,Math.min(canvas.clientWidth-28,left+width*camera.x/100+camera.dx*36));
-  const y=Math.max(28,Math.min(canvas.clientHeight-28,top+height*camera.y/100+camera.dy*36));
+  const x=Math.max(38,Math.min(canvas.clientWidth-38,left+width*camera.x/100+camera.dx*36));
+  const y=Math.max(38,Math.min(canvas.clientHeight-38,top+height*camera.y/100+camera.dy*36));
   button.style.left=x+'px';button.style.top=y+'px';button.querySelector('svg').style.transform=`rotate(${camera.angle}deg)`;
-  if(button.classList.contains('selected')){const field=canvas.querySelector('.v3-camera-field');if(field){v3LayoutCameraField(field,width,height,{...camera,x:(x-left)/width*100,y:(y-top)/height*100,dx:0,dy:0});field.style.left=(left-200)+'px';field.style.top=(top-200)+'px';}}
+  if(button.classList.contains('selected')){const field=canvas.querySelector('.v3-camera-field');if(field){v3LayoutCameraField(field,width,height,{...camera,x:camera.x,y:camera.y});field.style.left=(left-200)+'px';field.style.top=(top-200)+'px';}}
  });
 }
 const v7RenderInline=render;
