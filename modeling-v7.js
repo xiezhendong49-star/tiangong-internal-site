@@ -197,8 +197,8 @@ function v7LayoutInlineViews(){
  const width=p.width*room.box.w/100/scale,height=p.height*room.box.h/100/scale;
  canvas.querySelectorAll('.v7-view').forEach(button=>{
   const camera=V3_CAMERAS.find(c=>c.id===button.dataset.position);if(!camera)return;
-  const x=Math.max(38,Math.min(canvas.clientWidth-38,left+width*camera.x/100+camera.dx*36));
-  const y=Math.max(38,Math.min(canvas.clientHeight-38,top+height*camera.y/100+camera.dy*36));
+  const x=left+width*camera.x/100+camera.dx*36;
+  const y=top+height*camera.y/100+camera.dy*36;
   button.style.left=x+'px';button.style.top=y+'px';button.querySelector('svg').style.transform=`rotate(${camera.angle}deg)`;
   if(button.classList.contains('selected')){const field=canvas.querySelector('.v3-camera-field');if(field){v3LayoutCameraField(field,width,height,{...camera,x:camera.x,y:camera.y});field.style.left=(left-200)+'px';field.style.top=(top-200)+'px';}}
  });
